@@ -58,7 +58,17 @@ export default function AssociationListPage() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
+
+        {/* ← Bouton retour */}
+        <button style={styles.btnBack} onClick={() => navigate('/')}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Retour
+        </button>
+
         <h1 style={styles.title}>Associations</h1>
+
         <button style={styles.btnCreate} onClick={() => navigate('/associations/new')}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
             <line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -164,6 +174,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     color: '#1a1a1a',
     margin: 0,
+  },
+  // ← Style du bouton retour
+  btnBack: {
+    background: 'transparent',
+    color: '#555',
+    border: '0.5px solid #ccc',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    alignSelf: 'flex-start',
   },
   btnCreate: {
     background: '#185FA5',

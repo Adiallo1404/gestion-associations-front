@@ -1,14 +1,8 @@
 import api from "./axiosConfig";
 
-const BASE_URL = "/members";
+const BASE_URL = "/notifications";
 
-/* ✅ AJOUT ICI */
-export const getMembers = async (params?: any) => {
-  const res = await api.get(BASE_URL, { params });
-  return res.data;
-};
-
-export const memberService = {
+export const notificationService = {
   getAll: async (params?: any) => {
     const res = await api.get(BASE_URL, { params });
     return res.data;
@@ -24,8 +18,8 @@ export const memberService = {
     return res.data;
   },
 
-  update: async (id: number, data: any) => {
-    const res = await api.put(`${BASE_URL}/${id}`, data);
+  markAsRead: async (id: number) => {
+    const res = await api.patch(`${BASE_URL}/${id}/read`);
     return res.data;
   },
 

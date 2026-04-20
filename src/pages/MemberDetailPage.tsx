@@ -1,69 +1,103 @@
 import { useEffect, useState } from "react";
-import { getMemberById, deleteMember } from "../api/memberService";
 import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "react-toastify";
+import { getEmailById, deleteEmail } from "../api/emailEnvoyeService";
+import type { EmailEnvoyeDto } from "../types/emailEnvoye";
 
-export default function MemberDetailPage() {
-  const { id } = useParams();
+const EmailDetailPage = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  const [member, setMember] = useState<any>(null);
+  const [email, setEmail] = useState<EmailEnvoyeDto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
+    const fetchEmail = async () => {
+      try {
+        const data = await getEmailById(Number(id));
+        setEmail(data);
+      } catch {
+        setError("Email introuvable.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchEmail();
   }, [id]);
 
-  const fetchData = async () => {
+  const handleDelete = async () => {
+    if (!window.confirm("Supprimer cet email ?")) return;
     try {
-      const data = await getMemberById(Number(id));
-      setMember(data);
+      await deleteEmail(Number(id));
+      navigate("/emails-envoyes");
     } catch {
-      toast.error("❌ Erreur chargement");
+      setError("Erreur lors de la suppression.");
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("Supprimer ce membre ?")) return;
-    await deleteMember(Number(id));
-    toast.success("🗑️ Supprimé !");
-    navigate("/members");
-  };
+  if (loading) return <div style={{ textAlign: "center", padding: 64, color: "#6b7280" }}>Chargement...</div>;
+  if (error) return (
+    <div style={{ maxWidth: 600, margin: "40px auto", padding: 16 }}>
+      <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px" }}>{error}</div>
+    </div>
+  );
+  if (!email) return null;
 
-  if (!member) return <p>Chargement...</p>;
+  const rows = [
+    { label: "Destinataire", value: email.destinataire },
+    { label: "Sujet", value: email.sujet },
+    { label: "Association", value: email.associationId ?? "—" },
+    { label: "Date d'envoi", value: email.dateEnvoi ? new Date(email.dateEnvoi).toLocaleString("fr-FR") : "—" },
+  ];
 
   return (
-    <div style={container}>
-      <div style={card}>
-        <button style={btnBack} onClick={() => navigate("/members")}>
+    <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 16px" }}>
+
+      {/* HEADER */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Email #{email.id}</h2>
+        <button
+          onClick={() => navigate("/emails-envoyes")}
+          style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500 }}
+        >
           ← Retour
         </button>
+      </div>
 
-        <h2 style={title as any}>
-          👤 {member.firstName} {member.lastName}
-        </h2>
+      {/* CARD */}
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ padding: 24 }}>
 
-        <p>Email : {member.email}</p>
-        <p>Téléphone : {member.phone}</p>
-        <p>Adresse : {member.address || "-"}</p>
-        {/* ✅ FIX : association est un objet imbriqué */}
-        <p>Association : {member.association?.name || "-"}</p>
+          {/* CHAMPS */}
+          {rows.map(({ label, value }) => (
+            <div key={label} style={{ display: "flex", borderBottom: "1px solid #f3f4f6", padding: "12px 0" }}>
+              <span style={{ width: 160, color: "#6b7280", fontSize: 14, fontWeight: 500, flexShrink: 0 }}>{label}</span>
+              <span style={{ fontSize: 14, color: "#111827" }}>{String(value)}</span>
+            </div>
+          ))}
 
-        <div style={{ marginTop: "20px" }}>
-          <button style={btnEdit} onClick={() => navigate(`/members/${id}/edit`)}>
-            ✏️ Modifier
-          </button>
-          <button style={btnDelete} onClick={handleDelete}>
-            🗑️ Supprimer
+          {/* CONTENU */}
+          <div style={{ display: "flex", paddingTop: 12 }}>
+            <span style={{ width: 160, color: "#6b7280", fontSize: 14, fontWeight: 500, flexShrink: 0 }}>Contenu</span>
+            <div style={{ flex: 1, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 16px", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", minHeight: 80, color: email.contenu ? "#111827" : "#9ca3af" }}>
+              {email.contenu || "Aucun contenu"}
+            </div>
+          </div>
+
+        </div>
+
+        {/* FOOTER */}
+        <div style={{ padding: "16px 24px", background: "#f9fafb", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={handleDelete}
+            style={{ padding: "10px 20px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 }}
+          >
+            Supprimer
           </button>
         </div>
       </div>
+
     </div>
   );
-}
+};
 
-const container = { display: "flex", justifyContent: "center", marginTop: "40px" };
-const card = { background: "white", padding: "20px", borderRadius: "10px", minWidth: "350px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" };
-const title = { textAlign: "center", fontSize: "20px" };
-const btnEdit = { marginRight: "10px", background: "#27ae60", color: "white", border: "none", padding: "8px 12px", borderRadius: "6px", cursor: "pointer" };
-const btnDelete = { background: "#e74c3c", color: "white", border: "none", padding: "8px 12px", borderRadius: "6px", cursor: "pointer" };
-const btnBack = { marginBottom: "10px", background: "none", border: "1px solid #ccc", padding: "6px 12px", borderRadius: "6px", cursor: "pointer" };
+export default EmailDetailPage;

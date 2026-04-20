@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  createMember,
-  getMemberById,
-  updateMember,
-} from "../api/memberService";
+import { memberService } from "../api/memberService";
 import { getAssociations } from "../api/associationService";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -24,18 +20,17 @@ export default function MemberFormPage() {
   const [associations, setAssociations] = useState<any[]>([]);
 
   useEffect(() => {
-    // 🔥 charger toutes les associations
     getAssociations(0, 1000).then((res) => setAssociations(res.content));
 
     if (id) {
-      getMemberById(Number(id)).then((data) => {
+      memberService.getById(Number(id)).then((data) => {
         setForm({
           firstName: data.firstName || "",
           lastName: data.lastName || "",
           email: data.email || "",
           phone: data.phone || "",
           address: data.address || "",
-          associationId: data.association?.id || "", 
+          associationId: data.association?.id || "",
         });
       });
     }
@@ -43,8 +38,8 @@ export default function MemberFormPage() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    console.log("🔥 handleSubmit appelé", form);
 
-    // 🔥 VALIDATION
     if (!form.firstName || !form.lastName) {
       toast.error("⚠️ Nom et prénom obligatoires");
       return;
@@ -57,21 +52,23 @@ export default function MemberFormPage() {
 
     const payload = {
       ...form,
-      associationId: Number(form.associationId), // ✅ conversion propre
+      associationId: Number(form.associationId),
     };
+
+    console.log("📦 Payload envoyé :", payload);
 
     try {
       if (id) {
-        await updateMember(Number(id), payload);
+        await memberService.update(Number(id), payload);
         toast.success("✅ Membre modifié !");
       } else {
-        await createMember(payload);
+        await memberService.create(payload);
         toast.success("✅ Membre créé !");
       }
 
       navigate("/members");
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("❌ Erreur API :", err?.response?.data || err);
       toast.error("❌ Erreur lors de l'enregistrement");
     }
   };
@@ -79,6 +76,12 @@ export default function MemberFormPage() {
   return (
     <div style={container}>
       <form onSubmit={handleSubmit} style={formStyle}>
+
+        {/* ← Bouton retour */}
+        <button type="button" style={btnBack} onClick={() => navigate('/members')}>
+          ← Retour
+        </button>
+
         <h2 style={title}>
           {id ? "✏️ Modifier un membre" : "➕ Créer un membre"}
         </h2>
@@ -87,56 +90,44 @@ export default function MemberFormPage() {
           style={input}
           placeholder="Prénom"
           value={form.firstName}
-          onChange={(e) =>
-            setForm({ ...form, firstName: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, firstName: e.target.value })}
         />
 
         <input
           style={input}
           placeholder="Nom"
           value={form.lastName}
-          onChange={(e) =>
-            setForm({ ...form, lastName: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, lastName: e.target.value })}
         />
 
         <input
           style={input}
+          type="email"
           placeholder="Email"
           value={form.email}
-          onChange={(e) =>
-            setForm({ ...form, email: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
         />
 
         <input
           style={input}
           placeholder="Téléphone"
           value={form.phone}
-          onChange={(e) =>
-            setForm({ ...form, phone: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, phone: e.target.value })}
         />
 
         <input
           style={input}
           placeholder="Adresse"
           value={form.address}
-          onChange={(e) =>
-            setForm({ ...form, address: e.target.value })
-          }
+          autoComplete="off"
+          onChange={(e) => setForm({ ...form, address: e.target.value })}
         />
 
-        {/* ✅ SELECT CORRIGÉ */}
         <select
           style={input}
           value={form.associationId}
           onChange={(e) =>
-            setForm({
-              ...form,
-              associationId: e.target.value || "",
-            })
+            setForm({ ...form, associationId: e.target.value || "" })
           }
         >
           <option value="">-- Choisir une association --</option>
@@ -194,4 +185,16 @@ const btnSave = {
   border: "none",
   borderRadius: "6px",
   cursor: "pointer",
+};
+
+// ← Style bouton retour
+const btnBack = {
+  padding: "8px 16px",
+  background: "transparent",
+  color: "#555",
+  border: "1px solid #ccc",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontSize: "14px",
+  alignSelf: "flex-start" as const,
 };

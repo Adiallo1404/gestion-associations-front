@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createCotisation, getCotisationById, updateCotisation } from "../api/cotisationService";
 import { getAssociations } from "../api/associationService";
-import { getMembers } from "../api/memberService";
+import { memberService } from "../api/memberService";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -45,9 +45,10 @@ export default function CotisationFormPage() {
   }, [id]);
 
   // Quand associationId change → recharger les membres filtrés
-  useEffect(() => {
+
+useEffect(() => {
     if (form.associationId) {
-      getMembers({ associationId: form.associationId }, 0, 1000)
+      memberService.getAll({ associationId: form.associationId, page: 0, size: 1000 })
         .then((res) => {
           setMembers(res.content);
           if (!id) {

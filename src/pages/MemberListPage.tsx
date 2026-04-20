@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getMembers, deleteMember } from "../api/memberService";
+import { memberService } from "../api/memberService";
 import { useNavigate } from "react-router-dom";
 import type { Member } from "../types/member";
 
@@ -12,8 +12,12 @@ export default function MemberListPage() {
 
   const fetchData = async () => {
     try {
-      const data = await getMembers(filters, page);
-      setMembers(data.content);
+      const data = await memberService.getAll({
+        ...filters,
+        page,
+      });
+
+      setMembers(data.content || data);
     } catch (err) {
       console.error(err);
     }
@@ -25,12 +29,18 @@ export default function MemberListPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Supprimer ce membre ?")) return;
-    await deleteMember(id);
+    await memberService.delete(id);
     fetchData();
   };
 
   return (
     <div style={{ padding: "20px" }}>
+
+      {/* ← Bouton retour */}
+      <button style={btnBack} onClick={() => navigate('/')}>
+        ← Retour
+      </button>
+
       <h2 style={{ color: "#2c3e50", textAlign: "center" }}>👥 Membres</h2>
 
       {/* FILTRES */}
@@ -38,17 +48,26 @@ export default function MemberListPage() {
         <input
           placeholder="Prénom"
           style={inputStyle}
-          onChange={(e) => { setPage(0); setFilters({ ...filters, firstName: e.target.value }); }}
+          onChange={(e) => {
+            setPage(0);
+            setFilters({ ...filters, firstName: e.target.value });
+          }}
         />
         <input
           placeholder="Nom"
           style={inputStyle}
-          onChange={(e) => { setPage(0); setFilters({ ...filters, lastName: e.target.value }); }}
+          onChange={(e) => {
+            setPage(0);
+            setFilters({ ...filters, lastName: e.target.value });
+          }}
         />
         <input
           placeholder="Email"
           style={inputStyle}
-          onChange={(e) => { setPage(0); setFilters({ ...filters, email: e.target.value }); }}
+          onChange={(e) => {
+            setPage(0);
+            setFilters({ ...filters, email: e.target.value });
+          }}
         />
         <button style={btnPrimary} onClick={fetchData}>
           🔍 Filtrer
@@ -69,7 +88,6 @@ export default function MemberListPage() {
             <th style={thStyle}>Nom complet</th>
             <th style={thStyle}>Email</th>
             <th style={thStyle}>Téléphone</th>
-            {/* ✅ Colonne Association ajoutée */}
             <th style={thStyle}>Association</th>
             <th style={thStyle}>Actions</th>
           </tr>
@@ -78,15 +96,22 @@ export default function MemberListPage() {
         <tbody>
           {members.map((m) => (
             <tr key={m.id} style={{ textAlign: "center", borderBottom: "1px solid #eee" }}>
-              <td style={tdStyle}>{m.firstName} {m.lastName}</td>
+              <td style={tdStyle}>
+                {m.firstName} {m.lastName}
+              </td>
               <td style={tdStyle}>{m.email}</td>
               <td style={tdStyle}>{m.phone}</td>
-              {/* ✅ FIX : association est un objet imbriqué */}
               <td style={tdStyle}>{m.associationName || "-"}</td>
               <td style={tdStyle}>
-                <button style={btnView} onClick={() => navigate(`/members/${m.id}`)}>👁️</button>
-                <button style={btnEdit} onClick={() => navigate(`/members/${m.id}/edit`)}>✏️</button>
-                <button style={btnDelete} onClick={() => handleDelete(m.id!)}>🗑️</button>
+                <button style={btnView} onClick={() => navigate(`/members/${m.id}`)}>
+                  👁️
+                </button>
+                <button style={btnEdit} onClick={() => navigate(`/members/${m.id}/edit`)}>
+                  ✏️
+                </button>
+                <button style={btnDelete} onClick={() => handleDelete(m.id!)}>
+                  🗑️
+                </button>
               </td>
             </tr>
           ))}
@@ -95,9 +120,17 @@ export default function MemberListPage() {
 
       {/* PAGINATION */}
       <div style={{ marginTop: "15px", textAlign: "center" }}>
-        <button style={btnPage} onClick={() => setPage(page - 1)} disabled={page === 0}>⬅</button>
+        <button
+          style={btnPage}
+          onClick={() => setPage(page - 1)}
+          disabled={page === 0}
+        >
+          ⬅
+        </button>
         <span style={{ margin: "0 10px" }}>Page {page + 1}</span>
-        <button style={btnPage} onClick={() => setPage(page + 1)}>➡</button>
+        <button style={btnPage} onClick={() => setPage(page + 1)}>
+          ➡
+        </button>
       </div>
     </div>
   );
@@ -114,3 +147,15 @@ const btnPage = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #
 const tableStyle = { width: "100%", borderCollapse: "collapse" as const, background: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" };
 const thStyle = { padding: "12px 16px" };
 const tdStyle = { padding: "10px 16px" };
+
+// ← Style bouton retour
+const btnBack = { 
+  marginBottom: "16px",
+  padding: "8px 16px", 
+  background: "transparent", 
+  color: "#555", 
+  border: "1px solid #ccc", 
+  borderRadius: "6px", 
+  cursor: "pointer",
+  fontSize: "14px",
+};
