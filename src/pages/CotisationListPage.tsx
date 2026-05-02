@@ -35,6 +35,12 @@ export default function CotisationListPage() {
 
   return (
     <div style={{ padding: "20px" }}>
+
+      {/* ✅ Bouton retour tableau de bord */}
+      <button style={btnBack} onClick={() => navigate("/")}>
+        ← Tableau de bord
+      </button>
+
       <h2 style={{ color: "#2c3e50", textAlign: "center" }}>💰 Cotisations</h2>
 
       {/* FILTRES */}
@@ -125,13 +131,15 @@ export default function CotisationListPage() {
   );
 }
 
+// ✅ Nouveau style bouton retour
+const btnBack    = { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 } as React.CSSProperties;
 const inputStyle = { padding: "8px", borderRadius: "6px", border: "1px solid #ccc" };
 const btnPrimary = { padding: "8px 12px", background: "#3498db", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" };
-const btnAdd = { padding: "10px 20px", background: "#2ecc71", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" };
-const btnView = { marginRight: "5px", background: "#3498db", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" };
-const btnEdit = { marginRight: "5px", background: "#27ae60", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" };
-const btnDelete = { background: "#e74c3c", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" };
-const btnPage = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" };
+const btnAdd     = { padding: "10px 20px", background: "#2ecc71", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" };
+const btnView    = { marginRight: "5px", background: "#3498db", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" };
+const btnEdit    = { marginRight: "5px", background: "#27ae60", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" };
+const btnDelete  = { background: "#e74c3c", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" };
+const btnPage    = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" };
 const tableStyle = { width: "100%", borderCollapse: "collapse" as const, background: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" };
-const thStyle = { padding: "12px 16px" };
-const tdStyle = { padding: "10px 16px" };
+const thStyle    = { padding: "12px 16px" };
+const tdStyle    = { padding: "10px 16px" };

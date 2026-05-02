@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { roleService } from "../api/roleService";
 import type { RoleDto } from "../types/role";
 
 export default function RoleListPage() {
+  const navigate = useNavigate();
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -40,18 +42,23 @@ export default function RoleListPage() {
   };
 
   const statCards = [
-    { label: "Total",             value: stats.total,            color: "#111827", bg: "#f9fafb" },
-    { label: "Avec permissions",  value: stats.avecPermissions,  color: "#185FA5", bg: "#E6F1FB" },
-    { label: "Sans permissions",  value: stats.sansPermissions,  color: "#b45309", bg: "#fefce8" },
+    { label: "Total",            value: stats.total,           color: "#111827", bg: "#f9fafb" },
+    { label: "Avec permissions", value: stats.avecPermissions, color: "#185FA5", bg: "#E6F1FB" },
+    { label: "Sans permissions", value: stats.sansPermissions, color: "#b45309", bg: "#fefce8" },
   ];
 
   return (
     <div style={{ padding: "24px 20px" }}>
 
+      {/* ✅ Bouton retour tableau de bord */}
+      <button style={btnBack} onClick={() => navigate("/")}>
+        ← Tableau de bord
+      </button>
+
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h2 style={{ color: "#2c3e50", margin: 0, fontSize: 22 }}>🔐 Rôles</h2>
-        <button style={btnAdd} onClick={() => window.location.href = "/roles/new"}>
+        <button style={btnAdd} onClick={() => navigate("/roles/new")}>
           ➕ Créer un rôle
         </button>
       </div>
@@ -102,7 +109,7 @@ export default function RoleListPage() {
             <tr
               key={r.id}
               style={{ textAlign: "center", borderBottom: "1px solid #eee", background: "white", cursor: "pointer" }}
-              onClick={() => window.location.href = `/roles/${r.id}`}
+              onClick={() => navigate(`/roles/${r.id}`)}
             >
               <td style={{ ...tdStyle, fontWeight: 600 }}>{r.name}</td>
               <td style={tdStyle}>{r.description || "—"}</td>
@@ -120,8 +127,8 @@ export default function RoleListPage() {
                 {r.creationDate ? new Date(r.creationDate).toLocaleDateString("fr-FR") : "—"}
               </td>
               <td style={tdStyle}>
-                <button style={btnView} onClick={(e) => { e.stopPropagation(); window.location.href = `/roles/${r.id}`; }}>👁️</button>
-                <button style={btnEdit} onClick={(e) => { e.stopPropagation(); window.location.href = `/roles/${r.id}/edit`; }}>✏️</button>
+                <button style={btnView} onClick={(e) => { e.stopPropagation(); navigate(`/roles/${r.id}`); }}>👁️</button>
+                <button style={btnEdit} onClick={(e) => { e.stopPropagation(); navigate(`/roles/${r.id}/edit`); }}>✏️</button>
                 <button style={btnDelete} onClick={(e) => handleDelete(r.id!, e)}>🗑️</button>
               </td>
             </tr>
@@ -139,13 +146,15 @@ export default function RoleListPage() {
   );
 }
 
+// ✅ Nouveau bouton retour
+const btnBack    = { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 } as React.CSSProperties;
 const inputStyle = { padding: "8px 12px", borderRadius: "6px", border: "1px solid #ccc", minWidth: 220 };
 const btnPrimary = { padding: "8px 12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" };
-const btnAdd = { padding: "10px 20px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 };
-const btnView = { marginRight: 4, background: "#3b82f6", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };
-const btnEdit = { marginRight: 4, background: "#f59e0b", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };
-const btnDelete = { background: "#e74c3c", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };
-const btnPage = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" };
+const btnAdd     = { padding: "10px 20px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 };
+const btnView    = { marginRight: 4, background: "#3b82f6", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };
+const btnEdit    = { marginRight: 4, background: "#f59e0b", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };
+const btnDelete  = { background: "#e74c3c", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };
+const btnPage    = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" };
 const tableStyle = { width: "100%", borderCollapse: "collapse" as const, background: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" };
-const thStyle = { padding: "12px 16px" };
-const tdStyle = { padding: "10px 16px" };
+const thStyle    = { padding: "12px 16px" };
+const tdStyle    = { padding: "10px 16px" };

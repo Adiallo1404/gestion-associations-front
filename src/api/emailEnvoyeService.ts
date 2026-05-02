@@ -1,7 +1,7 @@
 import axiosInstance from "./axiosConfig";
 import type  { EmailEnvoyeDto, EmailEnvoyePageResponse } from "../types/emailEnvoye";
 
-const BASE_URL = "/emails-envoyes";
+const BASE_URL = "/v1/emails-envoyes";
 
 export const sendEmail = async (dto: EmailEnvoyeDto): Promise<EmailEnvoyeDto> => {
   const response = await axiosInstance.post<EmailEnvoyeDto>(BASE_URL, dto);

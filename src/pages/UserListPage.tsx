@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getUsers, deleteUser } from '../api/userService';
-import type { User } from '../types/user';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getUsers, deleteUser } from "../api/userService";
+import type { User } from "../types/user";
 
 export default function UserListPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [totalElements, setTotalElements] = useState(0);
   const navigate = useNavigate();
 
@@ -15,30 +15,28 @@ export default function UserListPage() {
     try {
       setLoading(true);
       const data = await getUsers({}, 0, 100);
-      setUsers(data.content);
-      setTotalElements(data.totalElements);
+      setUsers(data.content ?? []);
+      setTotalElements(data.totalElements ?? 0);
     } catch {
-      setError('Erreur lors du chargement des utilisateurs');
+      setError("Erreur lors du chargement des utilisateurs");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Supprimer cet utilisateur ?')) return;
+    if (!confirm("Supprimer cet utilisateur ?")) return;
     try {
       await deleteUser(id);
       fetchData();
     } catch {
-      setError('Erreur lors de la suppression');
+      setError("Erreur lors de la suppression");
     }
   };
 
-  const filtered = users.filter(
+  const filtered = (users ?? []).filter(
     (u) =>
       u.firstName?.toLowerCase().includes(search.toLowerCase()) ||
       u.lastName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -46,23 +44,29 @@ export default function UserListPage() {
   );
 
   const formatDate = (raw?: string) => {
-    if (!raw) return '—';
+    if (!raw) return "—";
     const d = new Date(raw);
     return (
-      d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
-      ' ' +
-      d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+      " " +
+      d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     );
   };
 
   if (loading) return <p style={styles.message}>Chargement...</p>;
-  if (error) return <p style={{ ...styles.message, color: '#A32D2D' }}>{error}</p>;
+  if (error) return <p style={{ ...styles.message, color: "#A32D2D" }}>{error}</p>;
 
   return (
     <div style={styles.page}>
+
+      {/* ✅ Bouton retour tableau de bord */}
+      <button style={styles.btnBack} onClick={() => navigate("/")}>
+        ← Tableau de bord
+      </button>
+
       <div style={styles.header}>
         <h1 style={styles.title}>Utilisateurs</h1>
-        <button style={styles.btnCreate} onClick={() => navigate('/users/new')}>
+        <button style={styles.btnCreate} onClick={() => navigate("/users/new")}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
             <line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -80,7 +84,7 @@ export default function UserListPage() {
           style={styles.searchInput}
         />
         <span style={styles.countLabel}>
-          {filtered.length} utilisateur{filtered.length !== 1 ? 's' : ''}
+          {filtered.length} utilisateur{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -91,14 +95,14 @@ export default function UserListPage() {
           <table style={styles.table}>
             <thead>
               <tr style={styles.theadRow}>
-                <th style={{ ...styles.th, width: '52px' }}>ID</th>
+                <th style={{ ...styles.th, width: "52px" }}>ID</th>
                 <th style={styles.th}>Prénom</th>
                 <th style={styles.th}>Nom</th>
                 <th style={styles.th}>Email</th>
                 <th style={styles.th}>Rôle</th>
                 <th style={styles.th}>Statut</th>
                 <th style={styles.th}>Date création</th>
-                <th style={{ ...styles.th, width: '210px' }}>Actions</th>
+                <th style={{ ...styles.th, width: "210px" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -106,8 +110,8 @@ export default function UserListPage() {
                 <tr
                   key={user.id}
                   style={styles.tr}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#F8F8F8')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#F8F8F8")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <td style={styles.td}>
                     <span style={styles.idBadge}>{user.id}</span>
@@ -126,7 +130,7 @@ export default function UserListPage() {
                   </td>
                   <td style={styles.td}>
                     <span style={user.active ? styles.badgeActive : styles.badgeInactive}>
-                      {user.active ? 'Actif' : 'Inactif'}
+                      {user.active ? "Actif" : "Inactif"}
                     </span>
                   </td>
                   <td style={styles.td}>
@@ -167,189 +171,31 @@ export default function UserListPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: {
-    padding: '2rem 1.5rem',
-    background: '#f3f5f3b4',
-    minHeight: '100vh',
-    fontFamily: 'system-ui, sans-serif',
-  },
-  header: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginBottom: '1.5rem',
-    gap: '1rem',
-  },
-  title: {
-    fontSize: '32px',
-    fontWeight: 500,
-    color: '#1a1a1a',
-    margin: 0,
-  },
-  btnCreate: {
-    background: '#116ecb',
-    color: '#e6f1fbb9',
-    border: 'none',
-    padding: '10px 22px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 500,
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-  },
-  toolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    marginBottom: '1rem',
-  },
-  searchInput: {
-    flex: 1,
-    maxWidth: '380px',
-    padding: '9px 14px',
-    borderRadius: '8px',
-    border: '0.5px solid #ccc',
-    background: '#fff',
-    fontSize: '14px',
-    color: '#1a1a1a',
-    outline: 'none',
-  },
-  countLabel: {
-    marginLeft: 'auto',
-    fontSize: '13px',
-    color: '#888',
-  },
-  card: {
-    background: '#fff',
-    borderRadius: '12px',
-    border: '0.5px solid #e0e0e0',
-    overflow: 'hidden',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '14px',
-  },
-  theadRow: {
-    background: '#E6F1FB',
-  },
-  th: {
-    padding: '14px 16px',
-    textAlign: 'left',
-    fontWeight: 500,
-    fontSize: '13px',
-    color: '#0C447C',
-    borderBottom: '0.5px solid #B5D4F4',
-  },
-  tr: {
-    borderBottom: '0.5px solid #f0f0f0',
-    transition: 'background 0.1s',
-  },
-  td: {
-    padding: '12px 16px',
-    color: '#171717',
-    verticalAlign: 'middle',
-  },
-  idBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '28px',
-    height: '28px',
-    borderRadius: '50%',
-    background: '#f0f0f0',
-    fontSize: '12px',
-    fontWeight: 500,
-    color: '#555',
-  },
-  emailText: {
-    fontSize: '13px',
-    color: '#444',
-    fontFamily: 'monospace',
-  },
-  roleBadge: {
-    display: 'inline-block',
-    padding: '3px 10px',
-    borderRadius: '99px',
-    background: '#EAF3DE',
-    color: '#5ec807',
-    fontSize: '12px',
-    fontWeight: 500,
-  },
-  badgeActive: {
-    display: 'inline-block',
-    padding: '3px 10px',
-    borderRadius: '99px',
-    background: '#E6F4EA',
-    color: '#1E6B35',
-    fontSize: '12px',
-    fontWeight: 500,
-  },
-  badgeInactive: {
-    display: 'inline-block',
-    padding: '3px 10px',
-    borderRadius: '99px',
-    background: '#F5F5F5',
-    color: '#888',
-    fontSize: '12px',
-    fontWeight: 500,
-  },
-  dateText: {
-    fontSize: '12px',
-    color: '#222121',
-    fontFamily: 'monospace',
-  },
-  emptyText: {
-    color: '#bbb',
-    fontSize: '13px',
-  },
-  actions: {
-    display: 'flex',
-    gap: '6px',
-    alignItems: 'center',
-  },
-  btnVoir: {
-    background: '#f5f5f5',
-    color: '#333',
-    border: '0.5px solid #ccc',
-    padding: '5px 12px',
-    borderRadius: '8px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  btnEdit: {
-    background: '#EAF3DE',
-    color: '#6de50b',
-    border: '0.5px solid #C0DD97',
-    padding: '5px 12px',
-    borderRadius: '8px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  btnDel: {
-    background: '#FCEBEB',
-    color: '#ee1111',
-    border: '0.5px solid #F7C1C1',
-    padding: '5px 12px',
-    borderRadius: '8px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  message: {
-    textAlign: 'center',
-    marginTop: '2rem',
-    color: '#202020',
-    fontSize: '15px',
-  },
+  page:         { padding: "2rem 1.5rem", background: "#f3f5f3b4", minHeight: "100vh", fontFamily: "system-ui, sans-serif" },
+  // ✅ Nouveau bouton retour
+  btnBack:      { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 },
+  header:       { display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "1.5rem", gap: "1rem" },
+  title:        { fontSize: "32px", fontWeight: 500, color: "#1a1a1a", margin: 0 },
+  btnCreate:    { background: "#116ecb", color: "#e6f1fbb9", border: "none", padding: "10px 22px", borderRadius: "8px", fontSize: "14px", fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" },
+  toolbar:      { display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem" },
+  searchInput:  { flex: 1, maxWidth: "380px", padding: "9px 14px", borderRadius: "8px", border: "0.5px solid #ccc", background: "#fff", fontSize: "14px", color: "#1a1a1a", outline: "none" },
+  countLabel:   { marginLeft: "auto", fontSize: "13px", color: "#888" },
+  card:         { background: "#fff", borderRadius: "12px", border: "0.5px solid #e0e0e0", overflow: "hidden" },
+  table:        { width: "100%", borderCollapse: "collapse", fontSize: "14px" },
+  theadRow:     { background: "#E6F1FB" },
+  th:           { padding: "14px 16px", textAlign: "left", fontWeight: 500, fontSize: "13px", color: "#0C447C", borderBottom: "0.5px solid #B5D4F4" },
+  tr:           { borderBottom: "0.5px solid #f0f0f0", transition: "background 0.1s" },
+  td:           { padding: "12px 16px", color: "#171717", verticalAlign: "middle" },
+  idBadge:      { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "50%", background: "#f0f0f0", fontSize: "12px", fontWeight: 500, color: "#555" },
+  emailText:    { fontSize: "13px", color: "#444", fontFamily: "monospace" },
+  roleBadge:    { display: "inline-block", padding: "3px 10px", borderRadius: "99px", background: "#EAF3DE", color: "#5ec807", fontSize: "12px", fontWeight: 500 },
+  badgeActive:  { display: "inline-block", padding: "3px 10px", borderRadius: "99px", background: "#E6F4EA", color: "#1E6B35", fontSize: "12px", fontWeight: 500 },
+  badgeInactive:{ display: "inline-block", padding: "3px 10px", borderRadius: "99px", background: "#F5F5F5", color: "#888", fontSize: "12px", fontWeight: 500 },
+  dateText:     { fontSize: "12px", color: "#222121", fontFamily: "monospace" },
+  emptyText:    { color: "#bbb", fontSize: "13px" },
+  actions:      { display: "flex", gap: "6px", alignItems: "center" },
+  btnVoir:      { background: "#f5f5f5", color: "#333", border: "0.5px solid #ccc", padding: "5px 12px", borderRadius: "8px", fontSize: "12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" },
+  btnEdit:      { background: "#EAF3DE", color: "#6de50b", border: "0.5px solid #C0DD97", padding: "5px 12px", borderRadius: "8px", fontSize: "12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" },
+  btnDel:       { background: "#FCEBEB", color: "#ee1111", border: "0.5px solid #F7C1C1", padding: "5px 12px", borderRadius: "8px", fontSize: "12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" },
+  message:      { textAlign: "center", marginTop: "2rem", color: "#202020", fontSize: "15px" },
 };

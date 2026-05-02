@@ -1,9 +1,8 @@
 import axios from "./axiosConfig";
 import type { EmailCode } from "../types/emailCode";
 
-const BASE_URL = "/email-codes";
+const BASE_URL = "/v1/email-codes";
 
-// ✅ Renommé : generateEmailCode → generateCode
 export const generateCode = async (email: string): Promise<EmailCode> => {
   const response = await axios.post(`${BASE_URL}/generate`, null, {
     params: { email },

@@ -1,7 +1,7 @@
 import api from "./axiosConfig";
 import type { DocumentDto, DocumentPageResponse } from "../types/document";
 
-const BASE_URL = "/documents";
+const BASE_URL = "/v1/documents";
 
 export const uploadDocument = async (dto: DocumentDto): Promise<DocumentDto> => {
   const response = await api.post<DocumentDto>(BASE_URL, dto);

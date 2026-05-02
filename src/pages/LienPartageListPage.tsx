@@ -14,6 +14,24 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     marginBottom: "24px",
   },
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  btnBack: {
+    background: "transparent",
+    color: "var(--text)",
+    border: "1px solid var(--border)",
+    borderRadius: "8px",
+    padding: "7px 16px",
+    fontSize: "13px",
+    cursor: "pointer",
+    fontFamily: "var(--sans)",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
   title: {
     fontSize: "24px",
     fontWeight: 500,
@@ -270,7 +288,13 @@ const LienPartageListPage: React.FC = () => {
     <div style={styles.page}>
       {/* Header */}
       <div style={styles.header}>
-        <h2 style={styles.title}>Liens de partage</h2>
+        <div style={styles.headerLeft}>
+          {/* ✅ Bouton Retour au tableau de bord */}
+          <button style={styles.btnBack} onClick={() => navigate("/dashboard")}>
+            ← Retour
+          </button>
+          <h2 style={styles.title}>Liens de partage</h2>
+        </div>
         <button style={styles.btnPrimary} onClick={() => navigate("/liens-partage/new")}>
           + Nouveau lien
         </button>

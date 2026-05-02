@@ -26,7 +26,6 @@ export default function MemberHistoryFormPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔵 Charger associations
   useEffect(() => {
     const load = async () => {
       const res = await getAssociations(0, 1000);
@@ -35,7 +34,6 @@ export default function MemberHistoryFormPage() {
     load();
   }, []);
 
-  // 🔵 Charger users
   useEffect(() => {
     const load = async () => {
       const res = await getUsers(0, 1000);
@@ -44,24 +42,19 @@ export default function MemberHistoryFormPage() {
     load();
   }, []);
 
-  // 🔵 Charger membres selon association
   useEffect(() => {
     const loadMembers = async () => {
       if (!associationId) return;
-
       try {
         const res = await getMembers({ page: 0, size: 1000 });
-
         const filtered = res.content.filter(
           (m: any) => m.associationId === Number(associationId)
         );
-
         setMembers(filtered);
       } catch (err) {
         console.error("Erreur getMembers :", err);
       }
     };
-
     loadMembers();
   }, [associationId]);
 
@@ -69,7 +62,6 @@ export default function MemberHistoryFormPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       await createMemberHistory({
         memberId: Number(memberId),
@@ -79,7 +71,6 @@ export default function MemberHistoryFormPage() {
         nouveauStatut,
         motif,
       });
-
       navigate("/member-histories");
     } catch (err) {
       console.error(err);
@@ -92,9 +83,16 @@ export default function MemberHistoryFormPage() {
   return (
     <div style={container}>
       <div style={card}>
-        <button style={btnBack} onClick={() => navigate(-1)}>
-          ← Retour
-        </button>
+
+        {/* ✅ Boutons navigation */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+          <button style={btnBack} onClick={() => navigate(-1)}>
+            ← Retour
+          </button>
+          <button style={btnDashboard} onClick={() => navigate("/")}>
+            🏠 Tableau de bord
+          </button>
+        </div>
 
         <h1 style={title}>➕ Créer un historique</h1>
 
@@ -158,7 +156,7 @@ export default function MemberHistoryFormPage() {
             </select>
           </div>
 
-          {/* STATUT */}
+          {/* ANCIEN STATUT */}
           <div>
             <label style={label}>Ancien statut</label>
             <select
@@ -175,6 +173,7 @@ export default function MemberHistoryFormPage() {
             </select>
           </div>
 
+          {/* NOUVEAU STATUT */}
           <div>
             <label style={label}>Nouveau statut *</label>
             <select
@@ -204,6 +203,7 @@ export default function MemberHistoryFormPage() {
           <button type="submit" disabled={loading} style={btnSave}>
             {loading ? "⏳ Création..." : "✅ Créer"}
           </button>
+
         </form>
       </div>
     </div>
@@ -268,12 +268,23 @@ const btnSave = {
 };
 
 const btnBack = {
-  marginBottom: "10px",
   background: "#bdc3c7",
   border: "none",
-  padding: "6px 10px",
+  padding: "6px 12px",
   borderRadius: "6px",
   cursor: "pointer",
+  fontSize: "14px",
+};
+
+// ✅ Nouveau style bouton tableau de bord
+const btnDashboard = {
+  background: "#2563eb",
+  color: "white",
+  border: "none",
+  padding: "6px 12px",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontSize: "14px",
 };
 
 const errorStyle = {

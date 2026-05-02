@@ -1,6 +1,6 @@
 import api from "./axiosConfig";
 
-const BASE_URL = "/cotisation-configs";
+const BASE_URL = "/v1/cotisation-configs";
 
 export const cotisationConfigService = {
   create: async (data: any) => {

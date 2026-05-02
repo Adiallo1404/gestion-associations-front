@@ -17,18 +17,24 @@ const DocumentListPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
+  // ✅ CORRECTION : bonne URL /v1/associations
   useEffect(() => {
-    api.get("/associations?page=0&size=100")
-      .then((res) => setAssociations(res.data.content || []))
+    api.get("/v1/associations?page=0&size=100")
+      .then((res) => {
+        const data = res.data;
+        if (Array.isArray(data.content)) setAssociations(data.content);
+        else if (Array.isArray(data)) setAssociations(data);
+        else setAssociations([]);
+      })
       .catch(() => setError("Erreur lors du chargement des associations."));
   }, []);
 
-  const fetchDocuments = async (p = page) => {
-    if (!associationId) { setError("Veuillez choisir une association."); return; }
+  const fetchDocuments = async (p = 0, assocId = associationId) => {
+    if (!assocId) { setError("Veuillez choisir une association."); return; }
     setLoading(true);
     setError(null);
     try {
-      const data = await getDocumentsByAssociation(Number(associationId), p, 10);
+      const data = await getDocumentsByAssociation(Number(assocId), p, 10);
       setDocuments(data.content || []);
       setTotalPages(data.totalPages || 0);
       setSearched(true);
@@ -39,13 +45,16 @@ const DocumentListPage = () => {
     }
   };
 
-  const handleSearch = () => { setPage(0); fetchDocuments(0); };
+  const handleSearch = () => {
+    setPage(0);
+    fetchDocuments(0, associationId);
+  };
 
   const handleDeactivate = async (id: number) => {
     if (!window.confirm("Désactiver ce document ?")) return;
     try {
       await deactivateDocument(id);
-      fetchDocuments();
+      fetchDocuments(page, associationId);
     } catch {
       setError("Erreur lors de la désactivation.");
     }
@@ -77,6 +86,14 @@ const DocumentListPage = () => {
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 16px" }}>
+
+      {/* ✅ Bouton retour tableau de bord */}
+      <button
+        onClick={() => navigate("/")}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 }}
+      >
+        <span style={{ fontSize: 18 }}>←</span> Retour au tableau de bord
+      </button>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
@@ -184,7 +201,7 @@ const DocumentListPage = () => {
       {totalPages > 1 && (
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }}>
           <button
-            onClick={() => { setPage(page - 1); fetchDocuments(page - 1); }}
+            onClick={() => { const p = page - 1; setPage(p); fetchDocuments(p, associationId); }}
             disabled={page === 0}
             style={{ padding: "8px 16px", border: "1px solid #d1d5db", borderRadius: 6, background: page === 0 ? "#f9fafb" : "#fff", color: page === 0 ? "#9ca3af" : "#374151", cursor: page === 0 ? "default" : "pointer" }}
           >
@@ -193,14 +210,14 @@ const DocumentListPage = () => {
           {Array.from({ length: totalPages }, (_, i) => (
             <button
               key={i}
-              onClick={() => { setPage(i); fetchDocuments(i); }}
+              onClick={() => { setPage(i); fetchDocuments(i, associationId); }}
               style={{ padding: "8px 14px", border: "1px solid #d1d5db", borderRadius: 6, background: page === i ? "#4f46e5" : "#fff", color: page === i ? "#fff" : "#374151", cursor: "pointer", fontWeight: page === i ? 700 : 400 }}
             >
               {i + 1}
             </button>
           ))}
           <button
-            onClick={() => { setPage(page + 1); fetchDocuments(page + 1); }}
+            onClick={() => { const p = page + 1; setPage(p); fetchDocuments(p, associationId); }}
             disabled={page === totalPages - 1}
             style={{ padding: "8px 16px", border: "1px solid #d1d5db", borderRadius: 6, background: page === totalPages - 1 ? "#f9fafb" : "#fff", color: page === totalPages - 1 ? "#9ca3af" : "#374151", cursor: page === totalPages - 1 ? "default" : "pointer" }}
           >

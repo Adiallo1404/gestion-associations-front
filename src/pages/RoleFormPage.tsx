@@ -5,20 +5,19 @@ import { toast } from "react-toastify";
 import type { Permission } from "../types/role";
 
 const ALL_PERMISSIONS: Permission[] = [
-  "CREATE_USER", "READ_USER", "UPDATE_USER", "DELETE_USER",
-  "CREATE_ASSOCIATION", "READ_ASSOCIATION", "UPDATE_ASSOCIATION", "DELETE_ASSOCIATION",
+  "USER_CREATE", "USER_READ", "USER_UPDATE", "USER_DELETE",
+  "ASSOCIATION_CREATE", "ASSOCIATION_READ", "ASSOCIATION_UPDATE", "ASSOCIATION_DELETE",
 ];
 
-// ✅ Labels français
 const PERMISSION_LABELS: Record<Permission, string> = {
-  CREATE_USER:         "Créer un utilisateur",
-  READ_USER:           "Voir les utilisateurs",
-  UPDATE_USER:         "Modifier un utilisateur",
-  DELETE_USER:         "Supprimer un utilisateur",
-  CREATE_ASSOCIATION:  "Créer une association",
-  READ_ASSOCIATION:    "Voir les associations",
-  UPDATE_ASSOCIATION:  "Modifier une association",
-  DELETE_ASSOCIATION:  "Supprimer une association",
+  USER_CREATE:        "Créer un utilisateur",
+  USER_READ:          "Voir les utilisateurs",
+  USER_UPDATE:        "Modifier un utilisateur",
+  USER_DELETE:        "Supprimer un utilisateur",
+  ASSOCIATION_CREATE: "Créer une association",
+  ASSOCIATION_READ:   "Voir les associations",
+  ASSOCIATION_UPDATE: "Modifier une association",
+  ASSOCIATION_DELETE: "Supprimer une association",
 };
 
 export default function RoleFormPage() {
@@ -120,7 +119,6 @@ export default function RoleFormPage() {
                   checked={checked}
                   onChange={() => togglePermission(perm)}
                 />
-                {/* ✅ Label français */}
                 <span style={{ color: checked ? "#7c3aed" : "#374151", fontWeight: checked ? 600 : 400 }}>
                   {PERMISSION_LABELS[perm]}
                 </span>

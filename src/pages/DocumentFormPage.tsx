@@ -25,7 +25,7 @@ const DocumentFormPage = () => {
   const [errors, setErrors] = useState<{ file?: string; associationId?: string }>({});
 
   useEffect(() => {
-    api.get("/associations?page=0&size=100")
+    api.get("/v1/associations?page=0&size=100")
       .then((res) => setAssociations(res.data.content || []))
       .catch(() => setServerError("Erreur lors du chargement des associations."));
   }, []);
@@ -48,7 +48,7 @@ const DocumentFormPage = () => {
       formData.append("file", file!);
       formData.append("associationId", associationId);
       formData.append("typeDocument", typeDocument);
-      const res = await api.post("/documents/upload-file", formData, {
+        const res = await api.post("/v1/documents/upload-file", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       navigate(`/documents/${res.data.id}`);

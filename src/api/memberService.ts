@@ -1,8 +1,7 @@
 import api from "./axiosConfig";
 
-const BASE_URL = "/members";
+const BASE_URL = "/v1/members";
 
-/* ✅ AJOUT ICI */
 export const getMembers = async (params?: any) => {
   const res = await api.get(BASE_URL, { params });
   return res.data;

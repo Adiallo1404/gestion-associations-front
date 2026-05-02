@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cotisationConfigService } from "../api/cotisationConfigService";
 import { getAssociations } from "../api/associationService";
 import type { CotisationConfigDto } from "../types/cotisationConfig";
 import { PERIODICITE_LABELS } from "../types/cotisationConfig";
 
 export default function CotisationConfigListPage() {
+  const navigate = useNavigate();
   const [configs, setConfigs] = useState<CotisationConfigDto[]>([]);
   const [associations, setAssociations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +18,6 @@ export default function CotisationConfigListPage() {
       const assocList = assocData.content || [];
       setAssociations(assocList);
 
-      // Récupère la config de chaque association
       const results: CotisationConfigDto[] = [];
       await Promise.all(
         assocList.map(async (a: any) => {
@@ -53,19 +54,24 @@ export default function CotisationConfigListPage() {
   };
 
   const statCards = [
-    { label: "Total configs",   value: configs.length,                                                          color: "#111827", bg: "#f9fafb" },
-    { label: "Mensuelle",       value: configs.filter((c) => c.periodicite === "MENSUELLE").length,             color: "#185FA5", bg: "#E6F1FB" },
-    { label: "Trimestrielle",   value: configs.filter((c) => c.periodicite === "TRIMESTRIELLE").length,         color: "#3B6D11", bg: "#EAF3DE" },
-    { label: "Annuelle",        value: configs.filter((c) => c.periodicite === "ANNUELLE").length,              color: "#b45309", bg: "#fefce8" },
+    { label: "Total configs",   value: configs.length,                                                color: "#111827", bg: "#f9fafb" },
+    { label: "Mensuelle",       value: configs.filter((c) => c.periodicite === "MENSUELLE").length,   color: "#185FA5", bg: "#E6F1FB" },
+    { label: "Trimestrielle",   value: configs.filter((c) => c.periodicite === "TRIMESTRIELLE").length, color: "#3B6D11", bg: "#EAF3DE" },
+    { label: "Annuelle",        value: configs.filter((c) => c.periodicite === "ANNUELLE").length,    color: "#b45309", bg: "#fefce8" },
   ];
 
   return (
     <div style={{ padding: "24px 20px" }}>
 
+      {/* ✅ Bouton retour tableau de bord */}
+      <button style={btnBack} onClick={() => navigate("/")}>
+        ← Tableau de bord
+      </button>
+
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h2 style={{ color: "#2c3e50", margin: 0, fontSize: 22 }}>⚙️ Configurations de cotisation</h2>
-        <button style={btnAdd} onClick={() => window.location.href = "/cotisation-configs/new"}>
+        <button style={btnAdd} onClick={() => navigate("/cotisation-configs/new")}>
           ➕ Créer une configuration
         </button>
       </div>
@@ -105,9 +111,11 @@ export default function CotisationConfigListPage() {
               </tr>
             )}
             {configs.map((c) => (
-              <tr key={c.id}
+              <tr
+                key={c.id}
                 style={{ textAlign: "center", borderBottom: "1px solid #eee", background: "white", cursor: "pointer" }}
-                onClick={() => window.location.href = `/cotisation-configs/association/${c.associationId}`}>
+                onClick={() => navigate(`/cotisation-configs/association/${c.associationId}`)}
+              >
                 <td style={{ ...tdStyle, fontWeight: 600 }}>{getAssociationName(c.associationId)}</td>
                 <td style={tdStyle}>
                   <span style={{ fontWeight: 600, color: "#059669" }}>{Number(c.montantDefaut).toFixed(2)} €</span>
@@ -121,8 +129,8 @@ export default function CotisationConfigListPage() {
                 <td style={tdStyle}>{c.penaliteRetard ? `${Number(c.penaliteRetard).toFixed(2)} €` : "0.00 €"}</td>
                 <td style={tdStyle}>{c.delaiRappelJours ? `${c.delaiRappelJours} jours` : "—"}</td>
                 <td style={tdStyle}>
-                  <button style={btnView} onClick={(e) => { e.stopPropagation(); window.location.href = `/cotisation-configs/association/${c.associationId}`; }}>👁️</button>
-                  <button style={btnEdit} onClick={(e) => { e.stopPropagation(); window.location.href = `/cotisation-configs/association/${c.associationId}/edit`; }}>✏️</button>
+                  <button style={btnView} onClick={(e) => { e.stopPropagation(); navigate(`/cotisation-configs/association/${c.associationId}`); }}>👁️</button>
+                  <button style={btnEdit} onClick={(e) => { e.stopPropagation(); navigate(`/cotisation-configs/association/${c.associationId}/edit`); }}>✏️</button>
                   <button style={btnDelete} onClick={(e) => handleDelete(c.associationId, e)}>🗑️</button>
                 </td>
               </tr>
@@ -134,6 +142,7 @@ export default function CotisationConfigListPage() {
   );
 }
 
+const btnBack   = { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 } as React.CSSProperties;
 const btnAdd    = { padding: "10px 20px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 };
 const btnView   = { marginRight: 4, background: "#3b82f6", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };
 const btnEdit   = { marginRight: 4, background: "#f59e0b", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" };

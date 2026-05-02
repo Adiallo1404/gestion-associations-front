@@ -20,7 +20,7 @@ export interface PageResponse<T> {
   number: number;
 }
 
-const BASE_URL = "/member-histories"; // ✅ corrigé
+const BASE_URL = "/v1/member-histories"
 
 export const getMemberHistories = async (params: {
   memberId?: number;

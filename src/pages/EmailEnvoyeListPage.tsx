@@ -17,8 +17,8 @@ const EmailEnvoyeListPage = () => {
     setError(null);
     try {
       const data = await getEmailsByFilters({ ...filters, page, size: 10 });
-      setEmails(data.content);
-      setTotalPages(data.totalPages);
+      setEmails(data.content ?? []);
+      setTotalPages(data.totalPages ?? 0);
     } catch {
       setError("Erreur lors du chargement des emails.");
     } finally {
@@ -42,6 +42,14 @@ const EmailEnvoyeListPage = () => {
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 16px" }}>
+
+      {/* ✅ Bouton retour tableau de bord */}
+      <button
+        onClick={() => navigate("/")}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 }}
+      >
+        ← Tableau de bord
+      </button>
 
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
@@ -109,14 +117,14 @@ const EmailEnvoyeListPage = () => {
               </tr>
             </thead>
             <tbody>
-              {emails.length === 0 ? (
+              {(emails ?? []).length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>
                     Aucun email trouvé
                   </td>
                 </tr>
               ) : (
-                emails.map((email, i) => (
+                (emails ?? []).map((email, i) => (
                   <tr key={email.id} style={{ borderBottom: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
                     <td style={{ padding: "12px 16px", color: "#9ca3af", fontWeight: 600 }}>#{email.id}</td>
                     <td style={{ padding: "12px 16px" }}>{email.destinataire}</td>

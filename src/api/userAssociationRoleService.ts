@@ -1,7 +1,7 @@
 import axiosInstance from "./axiosConfig";
 import type { UserAssociationRole, UserAssociationRolePage } from "../types/userAssociationRole";
 
-const BASE_URL = "/user-association-roles";
+const BASE_URL = "/v1/user-association-roles";
 
 // ✅ Assigner un rôle
 export const assignRole = async (data: UserAssociationRole): Promise<UserAssociationRole> => {
@@ -15,18 +15,18 @@ export const updateRole = async (id: number, data: UserAssociationRole): Promise
   return response.data;
 };
 
-// ✅ Récupérer rôle par user + association
+// ✅ FIX : bonne URL — le controller attend userId + associationId en params sur GET /
 export const getRoleByUserAndAssociation = async (
   userId: number,
   associationId: number
 ): Promise<UserAssociationRole> => {
-  const response = await axiosInstance.get(`${BASE_URL}/by-user-association`, {
+  const response = await axiosInstance.get(BASE_URL, {
     params: { userId, associationId },
   });
   return response.data;
 };
 
-// ✅ Liste avec filtres + pagination
+// ✅ FIX : liste paginée sur /search et non sur /
 export const getRoles = async (
   page = 0,
   size = 10,
@@ -34,7 +34,7 @@ export const getRoles = async (
   associationId?: number,
   roleId?: number
 ): Promise<UserAssociationRolePage> => {
-  const response = await axiosInstance.get(BASE_URL, {
+  const response = await axiosInstance.get(`${BASE_URL}/search`, {
     params: { page, size, userId, associationId, roleId },
   });
   return response.data;

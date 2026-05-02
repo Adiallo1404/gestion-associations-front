@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { generateCode, verifyCode } from "../api/emailCodeService";
 
 export default function EmailCodeFormPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(Array(6).fill(""));
   const [message, setMessage] = useState("");
@@ -9,12 +11,10 @@ export default function EmailCodeFormPage() {
 
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  // ⏳ TIMER
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -24,17 +24,12 @@ export default function EmailCodeFormPage() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // 🔢 INPUT OTP
   const handleChange = (value: string, index: number) => {
     if (!/^[0-9]?$/.test(value)) return;
-
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
-
-    if (value && index < 5) {
-      inputsRef.current[index + 1]?.focus();
-    }
+    if (value && index < 5) inputsRef.current[index + 1]?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
@@ -45,13 +40,8 @@ export default function EmailCodeFormPage() {
 
   const finalCode = code.join("");
 
-  // 📩 GENERATE
   const handleGenerate = async () => {
-    if (!email) {
-      setMessage("❌ Email requis");
-      return;
-    }
-
+    if (!email) { setMessage("❌ Email requis"); return; }
     try {
       await generateCode(email);
       setMessage("📩 Code envoyé !");
@@ -62,15 +52,9 @@ export default function EmailCodeFormPage() {
     }
   };
 
-  // ✅ VERIFY
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (finalCode.length !== 6) {
-      setMessage("❌ Code incomplet");
-      return;
-    }
-
+    if (finalCode.length !== 6) { setMessage("❌ Code incomplet"); return; }
     try {
       await verifyCode(email, finalCode);
       setMessage("✅ Code validé !");
@@ -79,7 +63,6 @@ export default function EmailCodeFormPage() {
     }
   };
 
-  // 🔁 RESEND
   const handleResend = async () => {
     try {
       await generateCode(email);
@@ -95,11 +78,16 @@ export default function EmailCodeFormPage() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
+
+        {/* ✅ Bouton retour tableau de bord */}
+        <button style={styles.btnBack} onClick={() => navigate("/")}>
+          ← Tableau de bord
+        </button>
+
         <h2 style={styles.title}>🔐 Vérifier le code</h2>
 
         {message && <p style={styles.message}>{message}</p>}
 
-        {/* EMAIL */}
         <input
           type="email"
           placeholder="Votre email"
@@ -108,12 +96,10 @@ export default function EmailCodeFormPage() {
           style={styles.input}
         />
 
-        {/* GENERATE */}
         <button onClick={handleGenerate} style={styles.btnPrimary}>
           📩 Envoyer le code
         </button>
 
-        {/* OTP */}
         <form onSubmit={handleVerify}>
           <div style={styles.codeContainer}>
             {code.map((digit, index) => (
@@ -130,18 +116,15 @@ export default function EmailCodeFormPage() {
             ))}
           </div>
 
-          {/* TIMER */}
           <p style={styles.timer}>
             ⏳ Expire dans : {formatTime(timeLeft)}
           </p>
 
-          {/* VERIFY */}
           <button type="submit" style={styles.btnSuccess}>
             ✅ Vérifier
           </button>
         </form>
 
-        {/* RESEND */}
         <button onClick={handleResend} style={styles.btnResend}>
           🔁 Renvoyer le code
         </button>
@@ -149,8 +132,6 @@ export default function EmailCodeFormPage() {
     </div>
   );
 }
-
-/* 🎨 STYLES */
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
@@ -167,6 +148,19 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
     width: "380px",
   },
+  // ✅ Nouveau style bouton retour
+  btnBack: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 16,
+    background: "none",
+    border: "none",
+    color: "#6b7280",
+    cursor: "pointer",
+    fontSize: 14,
+    padding: 0,
+  },
   title: {
     textAlign: "center",
     marginBottom: "20px",
@@ -178,6 +172,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "8px",
     border: "1px solid #ccc",
     marginBottom: "10px",
+    boxSizing: "border-box",
   },
   codeContainer: {
     display: "flex",

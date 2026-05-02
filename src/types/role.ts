@@ -1,7 +1,7 @@
-export type Permission =
-  | "CREATE_USER" | "READ_USER" | "UPDATE_USER" | "DELETE_USER"
-  | "CREATE_ASSOCIATION" | "READ_ASSOCIATION" | "UPDATE_ASSOCIATION" | "DELETE_ASSOCIATION";
 
+export type Permission =
+  | "USER_CREATE" | "USER_READ" | "USER_UPDATE" | "USER_DELETE"
+  | "ASSOCIATION_CREATE" | "ASSOCIATION_READ" | "ASSOCIATION_UPDATE" | "ASSOCIATION_DELETE";
 export interface RoleDto {
   id?: number;
   name: string;

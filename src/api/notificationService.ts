@@ -1,6 +1,6 @@
 import api from "./axiosConfig";
 
-const BASE_URL = "/notifications";
+const BASE_URL = "/v1/notifications";
 
 export const notificationService = {
   getAll: async (params?: any) => {

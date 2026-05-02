@@ -10,6 +10,14 @@ export interface User {
   lastLoginAt?: string;
 }
 
+export interface CreateUserDto {
+  email: string;
+  firstName: string;
+  lastName: string;
+  globalRole?: string;
+  password: string;
+}
+
 export interface UserFilter {
   email?: string;
   firstName?: string;

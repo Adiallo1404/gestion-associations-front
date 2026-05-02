@@ -34,7 +34,6 @@ export default function MemberHistoryListPage() {
   const handleDelete = async (id?: number) => {
     if (!id) return;
     if (!confirm("Supprimer cet historique ?")) return;
-
     try {
       await deleteMemberHistory(id);
       fetchData();
@@ -53,23 +52,24 @@ export default function MemberHistoryListPage() {
     return (
       d.toLocaleDateString("fr-FR") +
       " " +
-      d.toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     );
   };
 
   if (loading) return <p style={styles.message}>Chargement...</p>;
-  if (error)
-    return <p style={{ ...styles.message, color: "#A32D2D" }}>{error}</p>;
+  if (error) return <p style={{ ...styles.message, color: "#A32D2D" }}>{error}</p>;
 
   return (
     <div style={styles.page}>
+
+      {/* ✅ Bouton retour tableau de bord */}
+      <button style={styles.btnBack} onClick={() => navigate("/")}>
+        ← Tableau de bord
+      </button>
+
       {/* HEADER */}
       <div style={styles.header}>
         <h1 style={styles.title}>Historique des membres</h1>
-
         <button
           style={styles.btnCreate}
           onClick={() => navigate("/member-histories/new")}
@@ -107,39 +107,26 @@ export default function MemberHistoryListPage() {
                 <th style={styles.th}>Actions</th>
               </tr>
             </thead>
-
             <tbody>
               {filtered.map((h) => (
                 <tr key={h.id} style={styles.tr}>
                   <td style={styles.td}>{h.id}</td>
-
                   <td style={styles.td}>
-                    {h.ancienStatut
-                      ? StatutMembreLabels[h.ancienStatut]
-                      : "Création"}
+                    {h.ancienStatut ? StatutMembreLabels[h.ancienStatut] : "Création"}
                   </td>
-
                   <td style={styles.td}>
                     {StatutMembreLabels[h.nouveauStatut]}
                   </td>
-
                   <td style={styles.td}>{h.motif || "—"}</td>
-
-                  <td style={styles.td}>
-                    {formatDate(h.dateChangement)}
-                  </td>
-
+                  <td style={styles.td}>{formatDate(h.dateChangement)}</td>
                   <td style={styles.td}>
                     <div style={styles.actions}>
                       <button
                         style={styles.btnVoir}
-                        onClick={() =>
-                          navigate(`/member-histories/${h.id}`)
-                        }
+                        onClick={() => navigate(`/member-histories/${h.id}`)}
                       >
                         Voir
                       </button>
-
                       <button
                         style={styles.btnDel}
                         onClick={() => handleDelete(h.id)}
@@ -158,12 +145,24 @@ export default function MemberHistoryListPage() {
   );
 }
 
-/* ✅ AJOUT ICI (IMPORTANT) */
 const styles = {
   page: {
     maxWidth: 1000,
     margin: "0 auto",
     padding: 20,
+  },
+  // ✅ Nouveau style bouton retour
+  btnBack: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 16,
+    background: "none",
+    border: "none",
+    color: "#6b7280",
+    cursor: "pointer",
+    fontSize: 14,
+    padding: 0,
   },
   header: {
     display: "flex",

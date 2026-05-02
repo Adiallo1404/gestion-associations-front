@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getUserById, createUser, updateUser } from '../api/userService';
-import type { User } from '../types/user';
+import type { User, CreateUserDto } from '../types/user';
 
 export default function UserFormPage() {
   const { id } = useParams();
@@ -11,8 +11,9 @@ export default function UserFormPage() {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [globalRole, setGlobalRole] = useState('');
+  const [globalRole, setGlobalRole] = useState('USER');
   const [active, setActive] = useState(true);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +25,7 @@ export default function UserFormPage() {
         setEmail(data.email);
         setFirstName(data.firstName);
         setLastName(data.lastName);
-        setGlobalRole(data.globalRole ?? '');
+        setGlobalRole(data.globalRole ?? 'USER');
         setActive(data.active ?? true);
       } catch {
         setError('Erreur lors du chargement');
@@ -38,13 +39,25 @@ export default function UserFormPage() {
     setLoading(true);
     setError(null);
 
-    const payload: User = { email, firstName, lastName, globalRole, active };
-
     try {
       if (isEdit) {
+        const payload: User = {
+          email,
+          firstName,
+          lastName,
+          globalRole: globalRole || undefined,
+          active,
+        };
         await updateUser(Number(id), payload);
         navigate(`/users/${id}`);
       } else {
+        const payload: CreateUserDto = {
+          email,
+          firstName,
+          lastName,
+          globalRole: globalRole || undefined,
+          password,
+        };
         await createUser(payload);
         navigate('/users');
       }
@@ -109,6 +122,21 @@ export default function UserFormPage() {
               />
             </div>
 
+            {!isEdit && (
+              <div style={{ ...styles.field, gridColumn: '1 / -1' }}>
+                <label style={styles.label}>Mot de passe *</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="Minimum 6 caractères"
+                  style={styles.input}
+                />
+              </div>
+            )}
+
             <div style={styles.field}>
               <label style={styles.label}>Rôle global</label>
               <select
@@ -116,9 +144,9 @@ export default function UserFormPage() {
                 onChange={(e) => setGlobalRole(e.target.value)}
                 style={styles.input}
               >
-                <option value="">— Aucun —</option>
-                <option value="ADMIN">ADMIN</option>
                 <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
               </select>
             </div>
 
