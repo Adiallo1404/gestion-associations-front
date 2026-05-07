@@ -5,12 +5,26 @@ import { memberService } from "../api/memberService";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
+const DEVISES = [
+  { code: "EUR", label: "€ Euro" },
+  { code: "USD", label: "$ Dollar américain" },
+  { code: "XOF", label: "FCFA Franc CFA (UEMOA)" },
+  { code: "XAF", label: "FCFA Franc CFA (CEMAC)" },
+  { code: "GNF", label: "GNF Franc Guinéen" },
+  { code: "MAD", label: "MAD Dirham marocain" },
+  { code: "DZD", label: "DZD Dinar algérien" },
+  { code: "TND", label: "TND Dinar tunisien" },
+  { code: "GBP", label: "£ Livre sterling" },
+  { code: "CHF", label: "CHF Franc suisse" },
+];
+
 export default function CotisationFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<any>({
     montant: "",
+    devise: "EUR",
     statut: "EN_ATTENTE",
     periodeDebut: "",
     periodeFin: "",
@@ -31,6 +45,7 @@ export default function CotisationFormPage() {
       getCotisationById(Number(id)).then((data) => {
         setForm({
           montant: data.montant || "",
+          devise: data.devise || "EUR",
           statut: data.statut || "EN_ATTENTE",
           periodeDebut: data.periodeDebut || "",
           periodeFin: data.periodeFin || "",
@@ -44,48 +59,44 @@ export default function CotisationFormPage() {
     }
   }, [id]);
 
-  // Quand associationId change → recharger les membres filtrés
-
-useEffect(() => {
+  useEffect(() => {
     if (form.associationId) {
       memberService.getAll({ associationId: form.associationId, page: 0, size: 1000 })
         .then((res) => {
           setMembers(res.content);
-          if (!id) {
-            setForm((prev: any) => ({ ...prev, memberId: "" }));
-          }
+          if (!id) setForm((prev: any) => ({ ...prev, memberId: "" }));
         });
     } else {
       setMembers([]);
     }
   }, [form.associationId]);
 
+  // Symbole affiché à côté des montants
+  const deviseLabel = DEVISES.find(d => d.code === form.devise)?.label || form.devise;
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
     if (!form.montant || Number(form.montant) <= 0) {
-      toast.error("⚠️ Montant obligatoire et strictement positif");
-      return;
+      toast.error("⚠️ Montant obligatoire et strictement positif"); return;
+    }
+    if (!form.devise) {
+      toast.error("⚠️ Choisir une devise"); return;
     }
     if (!form.associationId) {
-      toast.error("⚠️ Choisir une association");
-      return;
+      toast.error("⚠️ Choisir une association"); return;
     }
     if (!form.memberId) {
-      toast.error("⚠️ Choisir un membre");
-      return;
+      toast.error("⚠️ Choisir un membre"); return;
     }
     if (!form.periodeDebut || !form.periodeFin) {
-      toast.error("⚠️ Période début et fin obligatoires");
-      return;
+      toast.error("⚠️ Période début et fin obligatoires"); return;
     }
     if (form.periodeFin < form.periodeDebut) {
-      toast.error("⚠️ La période de fin doit être après la période de début");
-      return;
+      toast.error("⚠️ La période de fin doit être après la période de début"); return;
     }
     if (Number(form.montantPenalite) < 0) {
-      toast.error("⚠️ La pénalité ne peut pas être négative");
-      return;
+      toast.error("⚠️ La pénalité ne peut pas être négative"); return;
     }
 
     const payload = {
@@ -120,31 +131,23 @@ useEffect(() => {
           {id ? "✏️ Modifier une cotisation" : "➕ Créer une cotisation"}
         </h2>
 
-        {/* Association — doit être choisi EN PREMIER */}
+        {/* Association */}
         <label style={labelStyle}>Association *</label>
-        <select
-          style={input}
-          value={form.associationId}
-          onChange={(e) => setForm({ ...form, associationId: e.target.value, memberId: "" })}
-        >
+        <select style={input} value={form.associationId}
+          onChange={(e) => setForm({ ...form, associationId: e.target.value, memberId: "" })}>
           <option value="">-- Choisir une association --</option>
           {associations.map((a) => (
             <option key={a.id} value={a.id}>{a.name}</option>
           ))}
         </select>
 
-        {/* Membre — filtré selon l'association choisie */}
+        {/* Membre */}
         <label style={labelStyle}>Membre *</label>
         <select
-          style={{
-            ...input,
-            background: !form.associationId ? "#f5f5f5" : "white",
-            cursor: !form.associationId ? "not-allowed" : "pointer",
-          }}
+          style={{ ...input, background: !form.associationId ? "#f5f5f5" : "white", cursor: !form.associationId ? "not-allowed" : "pointer" }}
           value={form.memberId}
           disabled={!form.associationId}
-          onChange={(e) => setForm({ ...form, memberId: e.target.value })}
-        >
+          onChange={(e) => setForm({ ...form, memberId: e.target.value })}>
           <option value="">
             {!form.associationId
               ? "-- Choisir d'abord une association --"
@@ -153,35 +156,34 @@ useEffect(() => {
               : "-- Choisir un membre --"}
           </option>
           {members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.firstName} {m.lastName}
-            </option>
+            <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
           ))}
         </select>
 
-        {/* Montant */}
-        <label style={labelStyle}>Montant (€) *</label>
-        <input
-          style={input}
-          type="number"
-          step="0.01"
-          min="0.01"
+        {/* ✅ Devise */}
+        <label style={labelStyle}>Devise *</label>
+        <select style={input} value={form.devise}
+          onChange={(e) => setForm({ ...form, devise: e.target.value })}>
+          {DEVISES.map((d) => (
+            <option key={d.code} value={d.code}>{d.label}</option>
+          ))}
+        </select>
+
+        {/* ✅ Montant avec devise dynamique */}
+        <label style={labelStyle}>Montant ({deviseLabel}) *</label>
+        <input style={input} type="number" step="0.01" min="0.01"
           placeholder="Ex: 50.00"
           value={form.montant}
           onChange={(e) => {
             const val = Number(e.target.value);
             if (val < 0) return;
             setForm({ ...form, montant: e.target.value });
-          }}
-        />
+          }} />
 
         {/* Statut */}
         <label style={labelStyle}>Statut *</label>
-        <select
-          style={input}
-          value={form.statut}
-          onChange={(e) => setForm({ ...form, statut: e.target.value })}
-        >
+        <select style={input} value={form.statut}
+          onChange={(e) => setForm({ ...form, statut: e.target.value })}>
           <option value="EN_ATTENTE">En attente</option>
           <option value="PAYEE">Payée</option>
           <option value="EN_RETARD">En retard</option>
@@ -190,55 +192,35 @@ useEffect(() => {
 
         {/* Période début */}
         <label style={labelStyle}>Période début *</label>
-        <input
-          style={input}
-          type="date"
-          value={form.periodeDebut}
-          onChange={(e) => setForm({ ...form, periodeDebut: e.target.value })}
-        />
+        <input style={input} type="date" value={form.periodeDebut}
+          onChange={(e) => setForm({ ...form, periodeDebut: e.target.value })} />
 
         {/* Période fin */}
         <label style={labelStyle}>Période fin *</label>
-        <input
-          style={input}
-          type="date"
-          value={form.periodeFin}
-          onChange={(e) => setForm({ ...form, periodeFin: e.target.value })}
-        />
+        <input style={input} type="date" value={form.periodeFin}
+          onChange={(e) => setForm({ ...form, periodeFin: e.target.value })} />
 
         {/* Date échéance */}
         <label style={labelStyle}>Date d'échéance</label>
-        <input
-          style={input}
-          type="date"
-          value={form.dateEcheance}
-          onChange={(e) => setForm({ ...form, dateEcheance: e.target.value })}
-        />
+        <input style={input} type="date" value={form.dateEcheance}
+          onChange={(e) => setForm({ ...form, dateEcheance: e.target.value })} />
 
-        {/* Montant pénalité */}
-        <label style={labelStyle}>Montant pénalité (€)</label>
-        <input
-          style={input}
-          type="number"
-          step="0.01"
-          min="0"
+        {/* ✅ Montant pénalité avec devise dynamique */}
+        <label style={labelStyle}>Montant pénalité ({deviseLabel})</label>
+        <input style={input} type="number" step="0.01" min="0"
           placeholder="0.00"
           value={form.montantPenalite}
           onChange={(e) => {
             const val = Number(e.target.value);
             if (val < 0) return;
             setForm({ ...form, montantPenalite: e.target.value });
-          }}
-        />
+          }} />
 
         {/* Référence paiement */}
         <label style={labelStyle}>Référence paiement</label>
-        <input
-          style={input}
-          placeholder="Ex: VIR-2024-001"
+        <input style={input} placeholder="Ex: VIR-2024-001"
           value={form.referencePaiement}
-          onChange={(e) => setForm({ ...form, referencePaiement: e.target.value })}
-        />
+          onChange={(e) => setForm({ ...form, referencePaiement: e.target.value })} />
 
         <button type="submit" style={btnSave}>
           💾 {id ? "Mettre à jour" : "Enregistrer"}

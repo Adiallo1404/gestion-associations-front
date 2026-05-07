@@ -3,6 +3,16 @@ import type { User, CreateUserDto, UserFilter, PageResponse } from '../types/use
 
 const BASE_URL = '/v1/users'
 
+export async function getMyProfile(): Promise<User> {
+  const response = await api.get<User>(`${BASE_URL}/me`)
+  return response.data
+}
+
+export async function updateMyProfile(user: Partial<User>): Promise<User> {
+  const response = await api.put<User>(`${BASE_URL}/me`, user)
+  return response.data
+}
+
 export async function getUsers(
   filter: UserFilter = {},
   page = 0,

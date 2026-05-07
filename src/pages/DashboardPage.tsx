@@ -5,6 +5,9 @@ import { getUsers } from "../api/userService";
 import { getMembers } from "../api/memberService";
 import { getCotisations } from "../api/cotisationService";
 import { getRoles } from "../api/userAssociationRoleService";
+import { useRole } from "../hooks/useRole";
+import { useAuth } from '../context/AuthContext';
+import { useWindowSize } from "../hooks/useWindowSize";
 import {
   Chart,
   LineElement, PointElement, LineController,
@@ -20,55 +23,55 @@ Chart.register(
   Legend, Tooltip, Filler
 );
 
-const MENU_SECTIONS = [
+const ALL_MENU_SECTIONS = [
   {
     title: "Principal",
     items: [
-      { label: "🏠 Accueil",            path: "/" },
-      { label: "🏛️ Associations",       path: "/associations" },
-      { label: "👥 Membres",            path: "/members" },
-      { label: "🕐 Historique membres", path: "/member-histories" },
+      { label: "🏠 Accueil",            path: "/",                 roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "🏛️ Associations",       path: "/associations",     roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "👥 Membres",            path: "/members",          roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "🕐 Historique membres", path: "/member-histories", roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
     ],
   },
   {
     title: "Finances",
     items: [
-      { label: "💰 Cotisations",        path: "/cotisations" },
-      { label: "⚙️ Configs cotisation", path: "/cotisation-configs" },
+      { label: "💰 Cotisations",        path: "/cotisations",        roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "⚙️ Configs cotisation", path: "/cotisation-configs", roles: ['SUPER_ADMIN', 'ADMIN'] },
     ],
   },
   {
     title: "Gestion",
     items: [
-      { label: "👤 Utilisateurs",       path: "/users" },
-      { label: "🛡️ Rôles",             path: "/roles" },
-      { label: "🔗 User-Assoc-Roles",   path: "/user-association-roles" },
+      { label: "👤 Utilisateurs",      path: "/users",                  roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "🛡️ Rôles",            path: "/roles",                  roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "🔗 User-Assoc-Roles",  path: "/user-association-roles", roles: ['SUPER_ADMIN', 'ADMIN'] },
     ],
   },
   {
     title: "Communication",
     items: [
-      { label: "📧 Emails envoyés",     path: "/emails-envoyes" },
-      { label: "🔑 Code Email",         path: "/email-codes" },
-      { label: "🔔 Notifications",      path: "/notifications" },
+      { label: "📧 Emails envoyés", path: "/emails-envoyes", roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "🔑 Code Email",     path: "/email-codes",    roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "🔔 Notifications",  path: "/notifications",  roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
     ],
   },
   {
     title: "Autres",
     items: [
-      { label: "📄 Documents",          path: "/documents" },
-      { label: "🔗 Liens de partage",   path: "/liens-partage" },
+      { label: "📄 Documents",        path: "/documents",     roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "🔗 Liens de partage", path: "/liens-partage", roles: ['SUPER_ADMIN', 'ADMIN'] },
     ],
   },
 ];
 
-const QUICK_ACTIONS = [
-  { label: "🛡️ Assigner rôle",   path: "/user-association-roles/new" },
-  { label: "👥 Ajouter membre",  path: "/members/new" },
-  { label: "💰 Cotisation",       path: "/cotisations/new" },
-  { label: "📧 Email",           path: "/emails-envoyes/new" },
-  { label: "👤 Utilisateur",     path: "/users/new" },
-  { label: "📄 Document",        path: "/documents/new" },
+const ALL_QUICK_ACTIONS = [
+  { label: "🛡️ Assigner rôle",  path: "/user-association-roles/new", roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { label: "👥 Ajouter membre", path: "/members/new",                 roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { label: "💰 Cotisation",      path: "/cotisations/new",             roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { label: "📧 Email",          path: "/emails-envoyes/new",          roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+  { label: "👤 Utilisateur",    path: "/users/new",                   roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { label: "📄 Document",       path: "/documents/new",               roles: ['SUPER_ADMIN', 'ADMIN'] },
 ];
 
 const AVATAR_COLORS = [
@@ -86,6 +89,12 @@ const NOTIFS = [
   { icon: "⚠️", bg: "#fef2f2", text: "3 cotisations en retard",         time: "Hier" },
 ];
 
+const ROLE_BADGES: Record<string, { label: string; bg: string; color: string }> = {
+  SUPER_ADMIN: { label: "Super Admin", bg: "#7c3aed", color: "#fff" },
+  ADMIN:       { label: "Admin",       bg: "#1d4ed8", color: "#fff" },
+  USER:        { label: "Utilisateur", bg: "#16a34a", color: "#fff" },
+};
+
 export default function DashboardPage() {
   const navigate  = useNavigate();
   const location  = useLocation();
@@ -93,6 +102,30 @@ export default function DashboardPage() {
   const pieRef    = useRef<HTMLCanvasElement>(null);
   const lineChart = useRef<Chart | null>(null);
   const pieChart  = useRef<Chart | null>(null);
+
+  const { role, isSuperAdmin, isAdminOrSuperAdmin } = useRole();
+  const { user } = useAuth();
+  const { isMobile, isTablet } = useWindowSize();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const userInitials = user?.email
+    ? user.email.substring(0, 2).toUpperCase()
+    : 'ME';
+
+  const menuSections = ALL_MENU_SECTIONS
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => role && item.roles.includes(role)),
+    }))
+    .filter(section => section.items.length > 0);
+
+  const quickActions = ALL_QUICK_ACTIONS.filter(
+    action => role && action.roles.includes(role)
+  );
+
+  const roleBadge = role ? ROLE_BADGES[role] : null;
 
   const [stats, setStats] = useState([
     { label: "Associations",   value: 0, sub: "enregistrées", accent: "#1d4ed8", iconBg: "#eff6ff", icon: "🏛️", trend: "+3",  up: true  },
@@ -103,22 +136,30 @@ export default function DashboardPage() {
   ]);
 
   const [recentRoles, setRecentRoles] = useState<any[]>([]);
-  const [loading, setLoading]         = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const initials = (name?: string) =>
     name ? name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : "??";
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
+        const promises: Promise<any>[] = [
+          getAssociations(0, 1),
+          isAdminOrSuperAdmin ? getUsers({}, 0, 1) : Promise.resolve({ totalElements: 0 }),
+          getMembers({ page: 0, size: 1 }),
+          getCotisations({}, 0, 1),
+          isAdminOrSuperAdmin ? getRoles(0, 5) : Promise.resolve({ totalElements: 0, content: [] }),
+        ];
+
         const [assocRes, usersRes, membersRes, cotisRes, rolesRes] =
-          await Promise.allSettled([
-            getAssociations(0, 1),
-            getUsers({}, 0, 1),
-            getMembers({ page: 0, size: 1 }),
-            getCotisations({}, 0, 1),
-            getRoles(0, 5),
-          ]);
+          await Promise.allSettled(promises);
 
         const total = (r: PromiseSettledResult<any>) =>
           r.status === "fulfilled" ? (r.value?.totalElements ?? 0) : 0;
@@ -227,63 +268,226 @@ export default function DashboardPage() {
     };
   }, [loading, stats]);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
-    <div style={s.layout}>
+    <div style={{
+      display: "flex", width: "100%", height: "100vh",
+      fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+      background: "#f1f5f9", overflow: "hidden", position: "relative",
+    }}>
 
-      {/* ── SIDEBAR ── */}
-      <aside style={s.sidebar}>
-        <div style={s.sbBrand}>
-          <div style={s.sbLogo}>
-            <div style={s.sbDot}>G</div>
-            <span style={s.sbName}>GestAssoc</span>
+      {isMobile && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, height: 52,
+          background: "#0f172a", display: "flex", alignItems: "center",
+          justifyContent: "space-between", padding: "0 16px", zIndex: 200,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 30, height: 30, background: "#2563eb", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#fff" }}>G</div>
+            <span style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 15 }}>GestAssoc</span>
           </div>
+          <button
+            style={{ background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", padding: 4 }}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? "✕" : "☰"}
+          </button>
         </div>
-        <nav style={s.sbNav}>
-          {MENU_SECTIONS.map((section) => (
-            <div key={section.title}>
-              <div style={s.sbSection}>{section.title}</div>
-              {section.items.map((item) => {
-                const active =
-                  location.pathname === item.path ||
-                  (item.path !== "/" && location.pathname.startsWith(item.path));
-                return (
-                  <div
-                    key={item.path}
-                    style={{ ...s.mi, ...(active ? s.miActive : {}) }}
-                    onClick={() => navigate(item.path)}
-                  >
-                    {item.label}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-      </aside>
+      )}
 
-      {/* ── MAIN ── */}
-      <main style={s.main}>
+      {isMobile && sidebarOpen && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 150 }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-        <div style={s.topBar}>
-          <div>
-            <div style={s.topTitle}>Tableau de bord</div>
-            <div style={s.topSub}>
-              {new Date().toLocaleDateString("fr-FR", {
-                weekday: "long", year: "numeric",
-                month: "long", day: "numeric",
-              })}
+      {(!isMobile || sidebarOpen) && (
+        <aside style={{
+          width: isMobile ? 260 : isTablet ? 220 : 255,
+          background: "#0f172a", display: "flex", flexDirection: "column",
+          flexShrink: 0, overflowY: "auto", height: "100%",
+          position: isMobile ? "fixed" : "relative",
+          top: isMobile ? 52 : 0, left: 0, bottom: 0,
+          zIndex: isMobile ? 160 : "auto",
+        }}>
+          {!isMobile && (
+            <div style={s.sbBrand}>
+              <div style={s.sbLogo}>
+                <div style={s.sbDot}>G</div>
+                <span style={s.sbName}>GestAssoc</span>
+              </div>
+              {roleBadge && (
+                <div style={{ marginTop: 10, display: "inline-block", background: roleBadge.bg, color: roleBadge.color, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, letterSpacing: ".04em" }}>
+                  {roleBadge.label}
+                </div>
+              )}
             </div>
-          </div>
-          <div style={s.topRight}>
-            <div style={s.notifBtn}>
-              🔔
-              <div style={s.notifDot} />
+          )}
+
+          {isMobile && roleBadge && (
+            <div style={{ padding: "12px 16px 0" }}>
+              <div style={{ display: "inline-block", background: roleBadge.bg, color: roleBadge.color, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>
+                {roleBadge.label}
+              </div>
             </div>
-            <button style={s.addBtn} onClick={() => navigate("/associations/new")}>
-              + Nouvelle association
+          )}
+
+          <nav style={s.sbNav}>
+            {menuSections.map((section) => (
+              <div key={section.title}>
+                <div style={s.sbSection}>{section.title}</div>
+                {section.items.map((item) => {
+                  const active =
+                    location.pathname === item.path ||
+                    (item.path !== "/" && location.pathname.startsWith(item.path));
+                  return (
+                    <div
+                      key={item.path}
+                      style={{ ...s.mi, ...(active ? s.miActive : {}) }}
+                      onClick={() => { navigate(item.path); setSidebarOpen(false); }}
+                    >
+                      {item.label}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+
+          <div style={s.sbFooter}>
+            <button style={s.sbLogoutBtn} onClick={handleLogout}>
+              ⏻ Déconnexion
             </button>
           </div>
-        </div>
+        </aside>
+      )}
+
+      <main style={{
+        flex: 1, overflowY: "auto", overflowX: "hidden", height: "100%",
+        padding: isMobile ? "68px 12px 16px" : isTablet ? "20px 20px" : "24px 32px",
+      }}>
+
+        {!isMobile && (
+          <div style={s.topBar}>
+            <div>
+              <div style={{ ...s.topTitle, fontSize: isTablet ? 20 : 26 }}>Tableau de bord</div>
+              <div style={s.topSub}>
+                {new Date().toLocaleDateString("fr-FR", {
+                  weekday: "long", year: "numeric", month: "long", day: "numeric",
+                })}
+              </div>
+            </div>
+
+            <div style={s.topRight}>
+              <div style={s.notifBtn} onClick={() => navigate('/notifications')}>
+                🔔
+                <div style={s.notifDot} />
+              </div>
+
+              {isSuperAdmin && !isTablet && (
+                <button style={s.addBtn} onClick={() => navigate("/associations/new")}>
+                  + Nouvelle association
+                </button>
+              )}
+
+              <div style={{ position: 'relative' }}>
+                <div style={s.avatarBtn} onClick={() => setProfileOpen(!profileOpen)}>
+                  <div style={s.avatarCircle}>{userInitials}</div>
+                  {!isTablet && (
+                    <div style={{ lineHeight: 1.3 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
+                        {user?.email?.split('@')[0] || 'Mon compte'}
+                      </div>
+                      {roleBadge && (
+                        <div style={{ fontSize: 11, color: roleBadge.bg, fontWeight: 600 }}>
+                          {roleBadge.label}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <span style={{ fontSize: 10, color: '#94a3b8' }}>▼</span>
+                </div>
+
+                {profileOpen && (
+                  <>
+                    <div
+                      style={{ position: 'fixed', inset: 0, zIndex: 98 }}
+                      onClick={() => setProfileOpen(false)}
+                    />
+                    <div style={s.profileMenu}>
+                      <div style={s.profileHeader}>
+                        <div style={{ ...s.avatarCircle, width: 44, height: 44, fontSize: 16, flexShrink: 0 }}>
+                          {userInitials}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>
+                            {user?.email?.split('@')[0]}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                            {user?.email}
+                          </div>
+                          {roleBadge && (
+                            <div style={{
+                              display: 'inline-block', marginTop: 5,
+                              background: roleBadge.bg, color: roleBadge.color,
+                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                            }}>
+                              {roleBadge.label}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={s.profileDivider} />
+
+                      <button style={s.profileItem}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        onClick={() => { setProfileOpen(false); navigate('/users/me'); }}>
+                        👤 Mon profil
+                      </button>
+                      <button style={s.profileItem}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        onClick={() => { setProfileOpen(false); navigate('/forgot-password'); }}>
+                        🔐 Changer mot de passe
+                      </button>
+                      <button style={s.profileItem}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        onClick={() => { setProfileOpen(false); navigate('/notifications'); }}>
+                        🔔 Mes notifications
+                      </button>
+
+                      <div style={s.profileDivider} />
+
+                      <button
+                        style={{ ...s.profileItem, color: '#dc2626' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#fef2f2')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        onClick={handleLogout}>
+                        ⏻ Déconnexion
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isMobile && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Tableau de bord</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, textTransform: "capitalize" }}>
+              {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div style={s.loadWrap}>
@@ -291,120 +495,132 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* ── Stats ── */}
-            <div style={s.statsGrid}>
-              {stats.map((stat) => (
-                <div key={stat.label} style={s.sc}>
-                  <div style={{ ...s.scAccent, background: stat.accent }} />
-                  <div style={s.scTop}>
-                    <div style={{ ...s.scIcon, background: stat.iconBg }}>{stat.icon}</div>
-                    <div style={{
-                      ...s.scTrend,
-                      background: stat.up ? "#dcfce7" : "#fee2e2",
-                      color: stat.up ? "#15803d" : "#dc2626",
-                    }}>
-                      {stat.up ? "↑" : "↓"} {stat.trend}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(3, minmax(0,1fr))",
+              gap: isMobile ? 10 : 14,
+              marginBottom: 18,
+            }}>
+              {stats
+                .filter((_, i) => !(!isAdminOrSuperAdmin && (i === 1 || i === 4)))
+                .map((stat) => (
+                  <div key={stat.label} style={s.sc}>
+                    <div style={{ ...s.scAccent, background: stat.accent }} />
+                    <div style={s.scTop}>
+                      <div style={{ ...s.scIcon, background: stat.iconBg, width: isMobile ? 32 : 40, height: isMobile ? 32 : 40 }}>{stat.icon}</div>
+                      <div style={{ ...s.scTrend, background: stat.up ? "#dcfce7" : "#fee2e2", color: stat.up ? "#15803d" : "#dc2626" }}>
+                        {stat.up ? "↑" : "↓"} {stat.trend}
+                      </div>
                     </div>
+                    <div style={{ ...s.scVal, fontSize: isMobile ? 24 : 32 }}>{stat.value.toLocaleString("fr-FR")}</div>
+                    <div style={s.scLbl}>{stat.label}</div>
+                    <div style={s.scSub}>{stat.sub}</div>
                   </div>
-                  <div style={s.scVal}>{stat.value.toLocaleString("fr-FR")}</div>
-                  <div style={s.scLbl}>{stat.label}</div>
-                  <div style={s.scSub}>{stat.sub}</div>
-                </div>
-              ))}
+                ))}
             </div>
 
-            {/* ── Graphique + Notifications ── */}
-            <div style={s.row2}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isMobile || isTablet ? "1fr" : "1.6fr 1fr",
+              gap: 16, marginBottom: 16,
+            }}>
               <div style={s.card}>
                 <div style={s.cardHdr}>
                   <span style={s.cardTitle}>📈 Évolution des membres</span>
                   <button style={s.seeAll}>Ce mois →</button>
                 </div>
-                <div style={{ height: 200, position: "relative", marginTop: 8 }}>
+                <div style={{ height: isMobile ? 160 : 200, position: "relative", marginTop: 8 }}>
                   <canvas ref={lineRef} />
                 </div>
               </div>
-              <div style={s.card}>
-                <div style={s.cardHdr}>
-                  <span style={s.cardTitle}>🔔 Activité récente</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {NOTIFS.map((n, i) => (
-                    <div key={i} style={s.notifItem}>
-                      <div style={{ ...s.notifIc, background: n.bg }}>{n.icon}</div>
-                      <div>
-                        <div style={s.notifTxt}>{n.text}</div>
-                        <div style={s.notifTime}>{n.time}</div>
+              {!isMobile && (
+                <div style={s.card}>
+                  <div style={s.cardHdr}>
+                    <span style={s.cardTitle}>🔔 Activité récente</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {NOTIFS.map((n, i) => (
+                      <div key={i} style={s.notifItem}>
+                        <div style={{ ...s.notifIc, background: n.bg }}>{n.icon}</div>
+                        <div>
+                          <div style={s.notifTxt}>{n.text}</div>
+                          <div style={s.notifTime}>{n.time}</div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* ── Tableau + Accès rapides ── */}
-            <div style={s.row3}>
-              <div style={s.card}>
-                <div style={s.cardHdr}>
-                  <span style={s.cardTitle}>🧾 Derniers rôles assignés</span>
-                  <button style={s.seeAll} onClick={() => navigate("/user-association-roles")}>
-                    Voir tout →
-                  </button>
-                </div>
-                {recentRoles.length === 0 ? (
-                  <p style={{ color: "#94a3b8", fontSize: 15, textAlign: "center", padding: "16px 0" }}>
-                    Aucune affectation.
-                  </p>
-                ) : (
-                  <table style={s.table}>
-                    <thead>
-                      <tr>
-                        <th style={s.th}>Utilisateur</th>
-                        <th style={s.th}>Association</th>
-                        <th style={s.th}>Rôle</th>
-                        <th style={s.th}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentRoles.map((r, i) => {
-                        const av = AVATAR_COLORS[i % AVATAR_COLORS.length];
-                        return (
-                          <tr key={r.id ?? i}>
-                            <td style={s.td}>
-                              <div style={s.ucell}>
-                                <div style={{ ...s.av, background: av.bg, color: av.color }}>
-                                  {initials(r.userName)}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isMobile || isTablet ? "1fr" : "1.4fr 1fr",
+              gap: 16, marginBottom: 24,
+            }}>
+              {isAdminOrSuperAdmin && (
+                <div style={s.card}>
+                  <div style={s.cardHdr}>
+                    <span style={s.cardTitle}>🧾 Derniers rôles assignés</span>
+                    <button style={s.seeAll} onClick={() => navigate("/user-association-roles")}>
+                      Voir tout →
+                    </button>
+                  </div>
+                  {recentRoles.length === 0 ? (
+                    <p style={{ color: "#94a3b8", fontSize: 15, textAlign: "center", padding: "16px 0" }}>
+                      Aucune affectation.
+                    </p>
+                  ) : (
+                    <table style={s.table}>
+                      <thead>
+                        <tr>
+                          <th style={s.th}>Utilisateur</th>
+                          {!isMobile && <th style={s.th}>Association</th>}
+                          <th style={s.th}>Rôle</th>
+                          <th style={s.th}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentRoles.map((r, i) => {
+                          const av = AVATAR_COLORS[i % AVATAR_COLORS.length];
+                          return (
+                            <tr key={r.id ?? i}>
+                              <td style={s.td}>
+                                <div style={s.ucell}>
+                                  <div style={{ ...s.av, background: av.bg, color: av.color }}>
+                                    {initials(r.userName)}
+                                  </div>
+                                  <div style={s.uname}>{r.userName ?? `Utilisateur ${r.id}`}</div>
                                 </div>
-                                <div style={s.uname}>{r.userName ?? `Utilisateur ${r.id}`}</div>
-                              </div>
-                            </td>
-                            <td style={{ ...s.td, color: "#64748b" }}>
-                              {r.associationName ?? "—"}
-                            </td>
-                            <td style={s.td}>
-                              <span style={{ ...s.bdg, background: av.bg, color: av.color }}>
-                                {r.roleName ?? "—"}
-                              </span>
-                            </td>
-                            <td style={s.td}>
-                              <button style={s.det} onClick={() => navigate("/user-association-roles")}>
-                                Détail
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+                              </td>
+                              {!isMobile && (
+                                <td style={{ ...s.td, color: "#64748b" }}>{r.associationName ?? "—"}</td>
+                              )}
+                              <td style={s.td}>
+                                <span style={{ ...s.bdg, background: av.bg, color: av.color }}>
+                                  {r.roleName ?? "—"}
+                                </span>
+                              </td>
+                              <td style={s.td}>
+                                <button style={s.det} onClick={() => navigate("/user-association-roles")}>
+                                  Détail
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
 
               <div style={s.card}>
                 <div style={s.cardHdr}>
                   <span style={s.cardTitle}>🎯 Accès rapides</span>
                 </div>
-                <div style={s.qgrid}>
-                  {QUICK_ACTIONS.map((q) => (
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 9 }}>
+                  {quickActions.map((q) => (
                     <button
                       key={q.path}
                       style={s.qbtn}
@@ -426,12 +642,14 @@ export default function DashboardPage() {
                     </button>
                   ))}
                 </div>
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ ...s.cardTitle, marginBottom: 10 }}>📊 Répartition</div>
-                  <div style={{ height: 170, position: "relative" }}>
-                    <canvas ref={pieRef} />
+                {!isMobile && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ ...s.cardTitle, marginBottom: 10 }}>📊 Répartition</div>
+                    <div style={{ height: 170, position: "relative" }}>
+                      <canvas ref={pieRef} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </>
@@ -442,57 +660,53 @@ export default function DashboardPage() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  layout:    { display: "flex", width: "100%", height: "100vh", margin: 0, padding: 0, fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif", background: "#f1f5f9", overflow: "hidden" },
-  sidebar:   { width: 255, background: "#0f172a", display: "flex", flexDirection: "column", flexShrink: 0, overflowY: "auto", height: "100%" },
-  main:      { flex: 1, overflowY: "auto", overflowX: "hidden", padding: "24px 32px", height: "100%" },
-  sbBrand:   { padding: "22px 18px 18px", borderBottom: "1px solid #1e293b" },
-  sbLogo:    { display: "flex", alignItems: "center", gap: 10 },
-  sbDot:     { width: 36, height: 36, background: "#2563eb", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#fff", flexShrink: 0 },
-  sbName:    { fontSize: 17, fontWeight: 600, color: "#f1f5f9" },
-  sbNav:     { padding: "14px 10px", flex: 1 },
-  sbSection: { fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: ".08em", padding: "14px 8px 6px", fontWeight: 600 },
-  mi:        { display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: 7, cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 2 },
-  miActive:  { background: "#1d4ed8", color: "#fff" },
-  topBar:    { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  topTitle:  { fontSize: 26, fontWeight: 700, color: "#0f172a" },
-  topSub:    { fontSize: 14, color: "#64748b", marginTop: 3, textTransform: "capitalize" },
-  topRight:  { display: "flex", alignItems: "center", gap: 12 },
-  notifBtn:  { position: "relative", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18 },
-  notifDot:  { position: "absolute", top: 6, right: 6, width: 8, height: 8, background: "#ef4444", borderRadius: "50%", border: "2px solid #fff" },
-  addBtn:    { background: "#1d4ed8", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" },
-  loadWrap:  { display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 },
-
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 14, marginBottom: 18 },
-  sc:        { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "18px 20px", position: "relative", overflow: "hidden" },
-  scAccent:  { position: "absolute", left: 0, top: 0, bottom: 0, width: 5 },
-  scTop:     { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
-  scIcon:    { width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 },
-  scTrend:   { display: "flex", alignItems: "center", gap: 3, fontSize: 13, fontWeight: 600, padding: "3px 8px", borderRadius: 5 },
-  scVal:     { fontSize: 32, fontWeight: 700, color: "#0f172a", lineHeight: 1 },
-  scLbl:     { fontSize: 14, fontWeight: 600, color: "#475569", marginTop: 5 },
-  scSub:     { fontSize: 13, color: "#94a3b8", marginTop: 3 },
-
-  row2:      { display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 16, marginBottom: 16 },
-  row3:      { display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, marginBottom: 24 },
-  card:      { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "20px 22px" },
-  cardHdr:   { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  cardTitle: { fontSize: 14, fontWeight: 700, color: "#0f172a", textTransform: "uppercase", letterSpacing: ".04em" },
-  seeAll:    { fontSize: 13, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 },
-
-  table:     { width: "100%", borderCollapse: "collapse", fontSize: 14 },
-  th:        { textAlign: "left", color: "#94a3b8", fontWeight: 600, padding: "0 0 10px", fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "1px solid #f1f5f9" },
-  td:        { padding: "10px 0", borderBottom: "1px solid #f8fafc", color: "#334155", verticalAlign: "middle", fontSize: 14 },
-  ucell:     { display: "flex", alignItems: "center", gap: 10 },
-  av:        { width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 },
-  uname:     { fontWeight: 600, color: "#0f172a", fontSize: 14 },
-  bdg:       { padding: "4px 10px", borderRadius: 5, fontSize: 12, fontWeight: 600, letterSpacing: ".03em" },
-  det:       { background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 12px", fontSize: 13, color: "#64748b", cursor: "pointer" },
-
-  notifItem: { display: "flex", alignItems: "flex-start", gap: 12, padding: 12, background: "#f8fafc", borderRadius: 9 },
-  notifIc:   { width: 36, height: 36, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 },
-  notifTxt:  { fontSize: 14, color: "#334155", fontWeight: 500, lineHeight: 1.4 },
-  notifTime: { fontSize: 12, color: "#94a3b8", marginTop: 3 },
-
-  qgrid:     { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 9 },
-  qbtn:      { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 8px", fontSize: 13, color: "#334155", cursor: "pointer", textAlign: "center", fontWeight: 500 },
+  sbBrand:        { padding: "22px 18px 18px", borderBottom: "1px solid #1e293b" },
+  sbLogo:         { display: "flex", alignItems: "center", gap: 10 },
+  sbDot:          { width: 36, height: 36, background: "#2563eb", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#fff", flexShrink: 0 },
+  sbName:         { fontSize: 17, fontWeight: 600, color: "#f1f5f9" },
+  sbNav:          { padding: "14px 10px", flex: 1 },
+  sbSection:      { fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: ".08em", padding: "14px 8px 6px", fontWeight: 600 },
+  mi:             { display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: 7, cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 2 },
+  miActive:       { background: "#1d4ed8", color: "#fff" },
+  sbFooter:       { padding: "12px 10px", borderTop: "1px solid #1e293b" },
+  sbLogoutBtn:    { width: "100%", background: "transparent", color: "#f87171", border: "1px solid #7f1d1d", borderRadius: 7, padding: "10px 12px", fontSize: 14, cursor: "pointer", textAlign: "left" as const },
+  topBar:         { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  topTitle:       { fontSize: 26, fontWeight: 700, color: "#0f172a" },
+  topSub:         { fontSize: 14, color: "#64748b", marginTop: 3, textTransform: "capitalize" },
+  topRight:       { display: "flex", alignItems: "center", gap: 12 },
+  notifBtn:       { position: "relative", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18 },
+  notifDot:       { position: "absolute", top: 6, right: 6, width: 8, height: 8, background: "#ef4444", borderRadius: "50%", border: "2px solid #fff" },
+  addBtn:         { background: "#1d4ed8", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" },
+  loadWrap:       { display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 },
+  avatarBtn:      { display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 14px', cursor: 'pointer' },
+  avatarCircle:   { width: 34, height: 34, borderRadius: '50%', background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
+  profileMenu:    { position: 'absolute' as const, top: 'calc(100% + 8px)', right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,0.12)', minWidth: 240, zIndex: 99, overflow: 'hidden' },
+  profileHeader:  { padding: '16px', display: 'flex', alignItems: 'center', gap: 12, background: '#f8fafc' },
+  profileDivider: { height: '1px', background: '#f1f5f9' },
+  profileItem:    { display: 'block', width: '100%', textAlign: 'left' as const, background: 'transparent', border: 'none', padding: '11px 16px', fontSize: 14, color: '#374151', cursor: 'pointer', fontWeight: 500 },
+  sc:             { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "18px 20px", position: "relative", overflow: "hidden" },
+  scAccent:       { position: "absolute", left: 0, top: 0, bottom: 0, width: 5 },
+  scTop:          { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
+  scIcon:         { width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 },
+  scTrend:        { display: "flex", alignItems: "center", gap: 3, fontSize: 13, fontWeight: 600, padding: "3px 8px", borderRadius: 5 },
+  scVal:          { fontSize: 32, fontWeight: 700, color: "#0f172a", lineHeight: 1 },
+  scLbl:          { fontSize: 14, fontWeight: 600, color: "#475569", marginTop: 5 },
+  scSub:          { fontSize: 13, color: "#94a3b8", marginTop: 3 },
+  card:           { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "20px 22px" },
+  cardHdr:        { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  cardTitle:      { fontSize: 14, fontWeight: 700, color: "#0f172a", textTransform: "uppercase", letterSpacing: ".04em" },
+  seeAll:         { fontSize: 13, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 },
+  table:          { width: "100%", borderCollapse: "collapse", fontSize: 14 },
+  th:             { textAlign: "left", color: "#94a3b8", fontWeight: 600, padding: "0 0 10px", fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "1px solid #f1f5f9" },
+  td:             { padding: "10px 0", borderBottom: "1px solid #f8fafc", color: "#334155", verticalAlign: "middle", fontSize: 14 },
+  ucell:          { display: "flex", alignItems: "center", gap: 10 },
+  av:             { width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 },
+  uname:          { fontWeight: 600, color: "#0f172a", fontSize: 14 },
+  bdg:            { padding: "4px 10px", borderRadius: 5, fontSize: 12, fontWeight: 600, letterSpacing: ".03em" },
+  det:            { background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 12px", fontSize: 13, color: "#64748b", cursor: "pointer" },
+  notifItem:      { display: "flex", alignItems: "flex-start", gap: 12, padding: 12, background: "#f8fafc", borderRadius: 9 },
+  notifIc:        { width: 36, height: 36, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 },
+  notifTxt:       { fontSize: 14, color: "#334155", fontWeight: 500, lineHeight: 1.4 },
+  notifTime:      { fontSize: 12, color: "#94a3b8", marginTop: 3 },
+  qbtn:           { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 8px", fontSize: 13, color: "#334155", cursor: "pointer", textAlign: "center", fontWeight: 500 },
 };

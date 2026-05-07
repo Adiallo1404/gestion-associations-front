@@ -32,9 +32,9 @@ export default function NotificationFormPage() {
   });
 
   const [associations, setAssociations] = useState<any[]>([]);
-  const [members, setMembers]           = useState<any[]>([]);
-  const [users, setUsers]               = useState<any[]>([]);
-  const [submitting, setSubmitting]     = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     getAssociations(0, 1000)
@@ -49,207 +49,269 @@ export default function NotificationFormPage() {
   }, []);
 
   useEffect(() => {
-    if (form.associationId) {
-      memberService
-        .getAll({ associationId: form.associationId, size: 1000 })
-        .then((res) => setMembers(res.content || []));
-    } else {
+    if (!form.associationId) {
       setMembers([]);
+      return;
     }
+
+    memberService
+      .getAll({ associationId: Number(form.associationId), size: 1000 })
+      .then((res) => setMembers(res.content || []));
   }, [form.associationId]);
 
-  // ✅ FIX navigate : utilise window.location.href en fallback
-  const goToList = () => {
-    try {
-      navigate("/notifications");
-    } catch {
-      window.location.href = "/notifications";
-    }
-  };
-
   const handleSubmit = async () => {
-    if (!form.titre.trim())   { toast.error("⚠️ Titre obligatoire"); return; }
-    if (!form.message.trim()) { toast.error("⚠️ Message obligatoire"); return; }
-    if (!form.associationId)  { toast.error("⚠️ Choisir une association"); return; }
-    if (!form.destinataireId) { toast.error("⚠️ Choisir un destinataire"); return; }
+    if (!form.titre.trim()) return toast.error("Titre obligatoire");
+    if (!form.message.trim()) return toast.error("Message obligatoire");
+    if (!form.associationId) return toast.error("Association obligatoire");
+    if (!form.destinataireId) return toast.error("Destinataire obligatoire");
 
     const payload = {
-      titre:            form.titre.trim(),
-      message:          form.message.trim(),
+      titre: form.titre,
+      message: form.message,
       typeNotification: form.typeNotification,
-      statut:           "NON_LUE",
-      associationId:    Number(form.associationId),
-      destinataireId:   Number(form.destinataireId),
-      memberId:         form.memberId ? Number(form.memberId) : null,
-      dateExpiration:   form.dateExpiration || null,
-      lienAction:       form.lienAction.trim() || null,
-      envoyeeParEmail:  form.envoyeeParEmail,
+      statut: "NON_LUE",
+      associationId: Number(form.associationId),
+      destinataireId: Number(form.destinataireId),
+      memberId: form.memberId ? Number(form.memberId) : null,
+      lienAction: form.lienAction || null,
+      dateExpiration: form.dateExpiration || null,
+      envoyeeParEmail: form.envoyeeParEmail,
     };
 
-    console.log("📤 Payload envoyé :", payload);
     setSubmitting(true);
+
     try {
       await notificationService.create(payload);
-      toast.success("✅ Notification créée !");
-      // ✅ FIX : window.location.href au lieu de navigate
-      window.location.href = "/notifications";
+      toast.success("Notification créée avec succès 🎉");
+      navigate("/notifications");
     } catch (err: any) {
-      console.error("❌ Erreur:", err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Erreur inconnue";
-      toast.error(`❌ Erreur : ${msg}`);
+      toast.error(err?.message || "Erreur serveur");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{
-      display: "flex",
-      justifyContent: "center",
-      marginTop: 35,
-      background: "#f4f6f9",
-      minHeight: "100vh",
-    }}>
-      <div style={{
-        background: "white",
-        padding: 30,
-        borderRadius: 10,
-        boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-        width: 420,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        alignSelf: "flex-start",
-      }}>
-        <h2 style={{ textAlign: "center", color: "#4c1d95", marginBottom: 10 }}>
-          🔔 Créer une notification
-        </h2>
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <h2 style={styles.title}>🔔 Créer une notification</h2>
 
-        <label style={labelStyle}>Titre *</label>
+        {/* TITRE */}
+        <label style={styles.label}>Titre *</label>
         <input
-          style={input}
-          placeholder="Ex: Rappel cotisation"
+          style={styles.input}
           value={form.titre}
           onChange={(e) => setForm({ ...form, titre: e.target.value })}
+          placeholder="Titre de la notification"
         />
 
-        <label style={labelStyle}>Type *</label>
-        <select style={input} value={form.typeNotification}
-          onChange={(e) => setForm({ ...form, typeNotification: e.target.value })}>
+        {/* TYPE */}
+        <label style={styles.label}>Type *</label>
+        <select
+          style={styles.input}
+          value={form.typeNotification}
+          onChange={(e) =>
+            setForm({ ...form, typeNotification: e.target.value })
+          }
+        >
           {TYPE_OPTIONS.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
-          ))}
-        </select>
-
-        <label style={labelStyle}>Association *</label>
-        <select style={input} value={form.associationId}
-          onChange={(e) => setForm({ ...form, associationId: e.target.value, memberId: "" })}>
-          <option value="">-- Choisir une association --</option>
-          {associations.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-
-        <label style={labelStyle}>Destinataire (User) *</label>
-        <select style={input} value={form.destinataireId}
-          onChange={(e) => setForm({ ...form, destinataireId: e.target.value })}>
-          <option value="">-- Choisir un destinataire --</option>
-          {users.map((u) => (
-            <option key={u.roleid ?? u.id} value={u.roleid ?? u.id}>
-              {u.firstName} {u.lastName} — {u.email}
+            <option key={t.value} value={t.value}>
+              {t.label}
             </option>
           ))}
         </select>
 
-        <label style={labelStyle}>Membre concerné (optionnel)</label>
+        {/* ASSOCIATION */}
+        <label style={styles.label}>Association *</label>
         <select
-          style={{ ...input, background: !form.associationId ? "#f5f5f5" : "white" }}
-          value={form.memberId}
-          disabled={!form.associationId}
-          onChange={(e) => setForm({ ...form, memberId: e.target.value })}>
-          <option value="">
-            {!form.associationId
-              ? "-- Choisir d'abord une association --"
-              : "-- Aucun membre (optionnel) --"}
-          </option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
+          style={styles.input}
+          value={form.associationId}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              associationId: e.target.value,
+              memberId: "",
+            })
+          }
+        >
+          <option value="">-- Choisir --</option>
+          {associations.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
           ))}
         </select>
 
-        <label style={labelStyle}>Message *</label>
+        {/* DESTINATAIRE */}
+        <label style={styles.label}>Destinataire *</label>
+        <select
+          style={styles.input}
+          value={form.destinataireId}
+          onChange={(e) =>
+            setForm({ ...form, destinataireId: e.target.value })
+          }
+        >
+          <option value="">-- Choisir --</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.firstName} {u.lastName}
+            </option>
+          ))}
+        </select>
+
+        {/* MEMBRE */}
+        <label style={styles.label}>Membre (optionnel)</label>
+        <select
+          style={styles.input}
+          disabled={!form.associationId}
+          value={form.memberId}
+          onChange={(e) =>
+            setForm({ ...form, memberId: e.target.value })
+          }
+        >
+          <option value="">-- Aucun --</option>
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.firstName} {m.lastName}
+            </option>
+          ))}
+        </select>
+
+        {/* MESSAGE */}
+        <label style={styles.label}>Message *</label>
         <textarea
-          style={{ ...input, minHeight: 80, resize: "vertical" }}
-          placeholder="Contenu de la notification"
+          style={{ ...styles.input, height: 100 }}
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
+          placeholder="Message de la notification..."
         />
 
-        <label style={labelStyle}>Lien action (optionnel)</label>
+        {/* LIEN */}
+        <label style={styles.label}>Lien action</label>
         <input
-          style={input}
-          placeholder="Ex: /cotisations/123"
+          style={styles.input}
           value={form.lienAction}
-          onChange={(e) => setForm({ ...form, lienAction: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, lienAction: e.target.value })
+          }
+          placeholder="https://..."
         />
 
-        <label style={labelStyle}>Date d'expiration (optionnel)</label>
+        {/* DATE */}
+        <label style={styles.label}>Date expiration</label>
         <input
-          style={input}
           type="datetime-local"
+          style={styles.input}
           value={form.dateExpiration}
-          onChange={(e) => setForm({ ...form, dateExpiration: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, dateExpiration: e.target.value })
+          }
         />
 
-        <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+        {/* EMAIL */}
+        <label style={styles.checkbox}>
           <input
             type="checkbox"
             checked={form.envoyeeParEmail}
-            onChange={(e) => setForm({ ...form, envoyeeParEmail: e.target.checked })}
+            onChange={(e) =>
+              setForm({ ...form, envoyeeParEmail: e.target.checked })
+            }
           />
-          Envoyer aussi par email
+          Envoyer par email
         </label>
 
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          style={{
-            marginTop: 10,
-            padding: 10,
-            background: submitting ? "#c4b5fd" : "#8b5cf6",
-            color: "white",
-            border: "none",
-            borderRadius: 6,
-            cursor: submitting ? "not-allowed" : "pointer",
-            fontWeight: 600,
-            fontSize: 14,
-          }}>
-          {submitting ? "⏳ Enregistrement..." : "💾 Enregistrer"}
-        </button>
+        {/* BUTTONS */}
+        <div style={styles.actions}>
+          <button
+            style={styles.cancel}
+            onClick={() => navigate("/notifications")}
+          >
+            Annuler
+          </button>
 
-        {/* ✅ FIX : window.location.href au lieu de navigate */}
-        <button
-          onClick={() => window.location.href = "/notifications"}
-          style={{
-            padding: 10,
-            background: "#95a5a6",
-            color: "white",
-            border: "none",
-            borderRadius: 6,
-            cursor: "pointer",
-            fontSize: 14,
-          }}>
-          ✖️ Annuler
-        </button>
-
+          <button
+            style={styles.submit}
+            disabled={submitting}
+            onClick={handleSubmit}
+          >
+            {submitting ? "Enregistrement..." : "Créer notification"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 590, color: "#555" };
-const input: React.CSSProperties = { padding: 10, borderRadius: 6, border: "1px solid #ccc" };
+/* ================= STYLE ================= */
+const styles: Record<string, any> = {
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg,#eef2ff,#f8fafc)",
+    padding: 20,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 520,
+    background: "#fff",
+    padding: 28,
+    borderRadius: 14,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+  },
+  title: {
+    textAlign: "center",
+    marginBottom: 20,
+    color: "#1e1b4b",
+    fontSize: 20,
+    fontWeight: 700,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: 600,
+    marginTop: 10,
+    marginBottom: 5,
+    color: "#334155",
+  },
+  input: {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #e2e8f0",
+    outline: "none",
+    fontSize: 14,
+  },
+  checkbox: {
+    marginTop: 12,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 13,
+    color: "#334155",
+  },
+  actions: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: 20,
+    gap: 10,
+  },
+  cancel: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    border: "1px solid #cbd5e1",
+    background: "#fff",
+    cursor: "pointer",
+  },
+  submit: {
+    flex: 2,
+    padding: 10,
+    borderRadius: 8,
+    border: "none",
+    background: "#4f46e5",
+    color: "#fff",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+};
