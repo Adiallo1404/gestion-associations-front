@@ -40,23 +40,16 @@ const EmailDetailPage = () => {
 
   return (
     <div className="container mt-4">
-
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="fw-bold">📧 Email #{email.id}</h2>
-
-        <button
-          className="btn btn-outline-secondary"
-          onClick={() => navigate("/emails-envoyes")}
-        >
+        <button className="btn btn-outline-secondary" onClick={() => navigate("/emails-envoyes")}>
           ← Retour
         </button>
       </div>
 
       <div className="card shadow-sm border-0">
         <div className="card-body">
-
           <dl className="row mb-0">
-
             <dt className="col-sm-3">👤 Destinataire</dt>
             <dd className="col-sm-9">{email.destinataire}</dd>
 
@@ -65,39 +58,30 @@ const EmailDetailPage = () => {
 
             <dt className="col-sm-3">🏢 Association</dt>
             <dd className="col-sm-9">
-              {email.associationNom ?? "—"}
+              {/* ✅ Corrigé : associationName au lieu de associationNom */}
+              {(email as any).associationName || (email as any).associationNom || "—"}
             </dd>
 
             <dt className="col-sm-3">📅 Date</dt>
             <dd className="col-sm-9">
-              {email.dateEnvoi
-                ? new Date(email.dateEnvoi).toLocaleString("fr-FR")
-                : "—"}
+              {email.dateEnvoi ? new Date(email.dateEnvoi).toLocaleString("fr-FR") : "—"}
             </dd>
 
             <dt className="col-sm-3">💬 Contenu</dt>
             <dd className="col-sm-9">
               <div className="border rounded p-3 bg-light">
-                {email.contenu || (
-                  <span className="text-muted">Aucun contenu</span>
-                )}
+                {email.contenu || <span className="text-muted">Aucun contenu</span>}
               </div>
             </dd>
-
           </dl>
-
         </div>
 
         <div className="card-footer text-end">
-          <button
-            className="btn btn-danger shadow-sm"
-            onClick={handleDelete}
-          >
+          <button className="btn btn-danger shadow-sm" onClick={handleDelete}>
             🗑️ Supprimer
           </button>
         </div>
       </div>
-
     </div>
   );
 };

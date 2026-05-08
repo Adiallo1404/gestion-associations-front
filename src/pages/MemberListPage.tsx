@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { Member } from "../types/member";
 import ConfirmModal from "../components/ConfirmModal";
 import { useWindowSize } from "../hooks/useWindowSize";
-import ExportPdfButton from "../components/ExportPdfButton"; // ✅
+import ExportPdfButton from "../components/ExportPdfButton";
 
 export default function MemberListPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -20,8 +20,13 @@ export default function MemberListPage() {
   const fetchData = async () => {
     try {
       const data = await memberService.getAll({ ...filters, page });
-      setMembers(data.content || data);
-    } catch (err) { console.error(err); }
+      // On s'assure que data.content existe sinon on prend data
+      const content = data?.content || (Array.isArray(data) ? data : []);
+      setMembers(content);
+    } catch (err) { 
+      console.error(err); 
+      setMembers([]);
+    }
   };
 
   useEffect(() => { fetchData(); }, [filters, page]);
@@ -43,7 +48,7 @@ export default function MemberListPage() {
 
   const handleCancelDelete = () => setModal({ isOpen: false, id: null, label: "" });
 
-  // ✅ Config export PDF membres
+  // ✅ Config export PDF corrigée pour TypeScript
   const pdfOptions = {
     title: "Liste des membres",
     subtitle: "Export complet des membres enregistrés",
@@ -53,14 +58,13 @@ export default function MemberListPage() {
       { header: "Nom",         accessor: (m: Member) => m.lastName ?? "—",           width: 1.2 },
       { header: "Email",       accessor: (m: Member) => m.email ?? "—",              width: 2   },
       { header: "Téléphone",   accessor: (m: Member) => m.phone ?? "—",              width: 1.2 },
-      { header: "Association", accessor: (m: Member) => m.associationName ?? "—",    width: 1.5 },
+      { header: "Association", accessor: (m: Member) => (m as any).associationName ?? "—",    width: 1.5 },
     ],
     data: members,
   };
 
   return (
     <div style={{ padding: isMobile ? "12px" : "20px" }}>
-
       <ConfirmModal
         isOpen={modal.isOpen}
         title="Supprimer le membre"
@@ -73,10 +77,8 @@ export default function MemberListPage() {
 
       <button style={btnBack} onClick={() => navigate('/')}>← Retour</button>
 
-      {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ color: "#2c3e50", margin: 0, fontSize: isMobile ? 16 : 22 }}>👥 Membres</h2>
-        {/* ✅ Boutons groupés */}
         <div style={{ display: "flex", gap: 8 }}>
           <ExportPdfButton isMobile={isMobile} options={pdfOptions} />
           <button style={btnAdd} onClick={() => navigate("/members/new")}>
@@ -85,7 +87,6 @@ export default function MemberListPage() {
         </div>
       </div>
 
-      {/* FILTRES */}
       <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
         <input
           placeholder="Prénom"
@@ -109,7 +110,6 @@ export default function MemberListPage() {
         </button>
       </div>
 
-      {/* CONTENU */}
       {isMobile ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {members.length === 0 ? (
@@ -119,7 +119,7 @@ export default function MemberListPage() {
               <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{m.firstName} {m.lastName}</div>
               <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 2 }}>📧 {m.email}</div>
               {m.phone && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 2 }}>📞 {m.phone}</div>}
-              {m.associationName && <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 10 }}>🏢 {m.associationName}</div>}
+              {(m as any).associationName && <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 10 }}>🏢 {(m as any).associationName}</div>}
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <button style={{ ...btnView, flex: 1 }} onClick={() => navigate(`/members/${m.id}`)}>👁️</button>
                 <button style={{ ...btnEdit, flex: 1 }} onClick={() => navigate(`/members/${m.id}/edit`)}>✏️</button>
@@ -148,7 +148,7 @@ export default function MemberListPage() {
                 <td style={tdStyle}>{m.firstName} {m.lastName}</td>
                 <td style={tdStyle}>{m.email}</td>
                 {!isTablet && <td style={tdStyle}>{m.phone}</td>}
-                {!isTablet && <td style={tdStyle}>{m.associationName || "-"}</td>}
+                {!isTablet && <td style={tdStyle}>{(m as any).associationName || "-"}</td>}
                 <td style={tdStyle}>
                   <button style={btnView} onClick={() => navigate(`/members/${m.id}`)}>👁️</button>
                   <button style={btnEdit} onClick={() => navigate(`/members/${m.id}/edit`)}>✏️</button>
@@ -160,7 +160,6 @@ export default function MemberListPage() {
         </table>
       )}
 
-      {/* PAGINATION */}
       <div style={{ marginTop: 16, textAlign: "center" }}>
         <button style={btnPage} onClick={() => setPage(page - 1)} disabled={page === 0}>⬅</button>
         <span style={{ margin: "0 10px", fontSize: isMobile ? 13 : 14 }}>Page {page + 1}</span>
@@ -170,6 +169,7 @@ export default function MemberListPage() {
   );
 }
 
+// --- STYLES ---
 const inputStyle  = { padding: "8px", borderRadius: "6px", border: "1px solid #ccc" } as React.CSSProperties;
 const btnPrimary  = { padding: "8px 12px", background: "#3498db", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" } as React.CSSProperties;
 const btnAdd      = { padding: "10px 16px", background: "#2ecc71", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
