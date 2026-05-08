@@ -33,7 +33,7 @@ export default function MemberHistoryFormPage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await getUsers(0, 1000);
+      const res = await getUsers({}, 0, 1000);
       setUsers(res.content || []);
     };
     load();

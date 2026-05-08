@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+
 import type { EmailCode } from "../types/emailCode";
 
 const BASE_URL = "/v1/email-codes";

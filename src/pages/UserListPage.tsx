@@ -4,36 +4,32 @@ import { getUsers, deleteUser } from "../api/userService";
 import type { User } from "../types/user";
 import ConfirmModal from "../components/ConfirmModal";
 import { useWindowSize } from "../hooks/useWindowSize";
-import ExportPdfButton from "../components/ExportPdfButton"; // ✅
+import ExportPdfButton from "../components/ExportPdfButton";
 
 export default function UserListPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [totalElements, setTotalElements] = useState(0);
   const { isMobile, isTablet } = useWindowSize();
   const navigate = useNavigate();
 
   const [modal, setModal] = useState<{ isOpen: boolean; id: number | null; label: string }>
     ({ isOpen: false, id: null, label: '' });
 
- const fetchData = async () => {
-  try {
-    setLoading(true);
-    const data = await getUsers({}, 0, 100);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await getUsers({}, 0, 100);
+      const validUsers = (data.content ?? []).filter((u: any) => u.id !== undefined && u.id !== null);
+      setUsers(validUsers);
+    } catch {
+      setError("Erreur lors du chargement des utilisateurs");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // 🔥 sécurité : on filtre les users sans id
-    const validUsers = (data.content ?? []).filter((u: any) => u.id !== undefined && u.id !== null);
-
-    setUsers(validUsers);
-    setTotalElements(data.totalElements ?? 0);
-  } catch {
-    setError("Erreur lors du chargement des utilisateurs");
-  } finally {
-    setLoading(false);
-  }
-};
   useEffect(() => { fetchData(); }, []);
 
   const handleDeleteClick = (id: number, firstName: string, lastName: string) =>
@@ -69,7 +65,6 @@ export default function UserListPage() {
     );
   };
 
-  // ✅ Config export PDF — après filtered, avant le return
   const pdfOptions = {
     title: "Liste des utilisateurs",
     subtitle: "Export complet des utilisateurs du système",
@@ -104,7 +99,6 @@ export default function UserListPage() {
 
       <button style={styles.btnBack} onClick={() => navigate("/")}>← Tableau de bord</button>
 
-      {/* HEADER ✅ */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <h1 style={{ ...styles.title, fontSize: isMobile ? 18 : 32 }}>👤 Utilisateurs</h1>
         <div style={{ display: "flex", gap: 8 }}>
@@ -119,7 +113,6 @@ export default function UserListPage() {
         </div>
       </div>
 
-      {/* TOOLBAR */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1rem" }}>
         <input
           type="text"
@@ -133,7 +126,6 @@ export default function UserListPage() {
         </span>
       </div>
 
-      {/* CONTENU */}
       {filtered.length === 0 ? (
         <p style={styles.message}>Aucun utilisateur trouvé.</p>
       ) : isMobile ? (
@@ -255,7 +247,6 @@ export default function UserListPage() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   page:          { background: "#f3f5f3b4", minHeight: "100vh", fontFamily: "system-ui, sans-serif" },
   btnBack:       { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 },

@@ -5,14 +5,14 @@ import type { RoleDto, Permission } from "../types/role";
 
 // ✅ Labels français
 const PERMISSION_LABELS: Record<Permission, string> = {
-  CREATE_USER:         "Créer un utilisateur",
-  READ_USER:           "Voir les utilisateurs",
-  UPDATE_USER:         "Modifier un utilisateur",
-  DELETE_USER:         "Supprimer un utilisateur",
-  CREATE_ASSOCIATION:  "Créer une association",
-  READ_ASSOCIATION:    "Voir les associations",
-  UPDATE_ASSOCIATION:  "Modifier une association",
-  DELETE_ASSOCIATION:  "Supprimer une association",
+  USER_CREATE:          "Créer un utilisateur",
+  USER_READ:            "Voir les utilisateurs",
+  USER_UPDATE:          "Modifier un utilisateur",
+  USER_DELETE:          "Supprimer un utilisateur",
+  ASSOCIATION_CREATE:   "Créer une association",
+  ASSOCIATION_READ:     "Voir les associations",
+  ASSOCIATION_UPDATE:   "Modifier une association",
+  ASSOCIATION_DELETE:   "Supprimer une association",
 };
 
 export default function RoleDetailPage() {
