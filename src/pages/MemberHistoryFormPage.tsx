@@ -17,12 +17,9 @@ export default function MemberHistoryFormPage() {
   const [associationId, setAssociationId] = useState("");
   const [memberId, setMemberId] = useState("");
   const [modifieParId, setModifieParId] = useState("");
-
   const [ancienStatut, setAncienStatut] = useState("");
   const [nouveauStatut, setNouveauStatut] = useState<StatutMembre>("ACTIF");
-
   const [motif, setMotif] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,15 +80,9 @@ export default function MemberHistoryFormPage() {
   return (
     <div style={container}>
       <div style={card}>
-
-        {/* ✅ Boutons navigation */}
         <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-          <button style={btnBack} onClick={() => navigate(-1)}>
-            ← Retour
-          </button>
-          <button style={btnDashboard} onClick={() => navigate("/")}>
-            🏠 Tableau de bord
-          </button>
+          <button style={btnBack} onClick={() => navigate(-1)}>← Retour</button>
+          <button style={btnDashboard} onClick={() => navigate("/")}>🏠 Tableau de bord</button>
         </div>
 
         <h1 style={title}>➕ Créer un historique</h1>
@@ -100,104 +91,59 @@ export default function MemberHistoryFormPage() {
 
         <form onSubmit={handleSubmit} style={formStyle}>
 
-          {/* ASSOCIATION */}
           <div>
-            <label style={label}>Association *</label>
-            <select
-              value={associationId}
-              onChange={(e) => {
-                setAssociationId(e.target.value);
-                setMemberId("");
-              }}
-              required
-              style={input}
-            >
+            <label style={labelStyle}>Association *</label>
+            <select value={associationId} onChange={(e) => { setAssociationId(e.target.value); setMemberId(""); }} required style={inputStyle}>
               <option value="">-- Choisir --</option>
               {associations.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
+                <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
           </div>
 
-          {/* MEMBRE */}
           <div>
-            <label style={label}>Membre *</label>
-            <select
-              value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-              required
-              style={input}
-            >
+            <label style={labelStyle}>Membre *</label>
+            <select value={memberId} onChange={(e) => setMemberId(e.target.value)} required style={inputStyle}>
               <option value="">-- Choisir --</option>
               {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.firstName} {m.lastName}
-                </option>
+                <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
               ))}
             </select>
           </div>
 
-          {/* USER */}
           <div>
-            <label style={label}>Modifié par</label>
-            <select
-              value={modifieParId}
-              onChange={(e) => setModifieParId(e.target.value)}
-              style={input}
-            >
+            <label style={labelStyle}>Modifié par</label>
+            <select value={modifieParId} onChange={(e) => setModifieParId(e.target.value)} style={inputStyle}>
               <option value="">-- Système --</option>
+              {/* ✅ CORRIGÉ : firstName + lastName au lieu de username */}
               {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.username}
-                </option>
+                <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
               ))}
             </select>
           </div>
 
-          {/* ANCIEN STATUT */}
           <div>
-            <label style={label}>Ancien statut</label>
-            <select
-              value={ancienStatut}
-              onChange={(e) => setAncienStatut(e.target.value)}
-              style={input}
-            >
+            <label style={labelStyle}>Ancien statut</label>
+            <select value={ancienStatut} onChange={(e) => setAncienStatut(e.target.value)} style={inputStyle}>
               <option value="">-- Aucun --</option>
               {StatutMembreOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
 
-          {/* NOUVEAU STATUT */}
           <div>
-            <label style={label}>Nouveau statut *</label>
-            <select
-              value={nouveauStatut}
-              onChange={(e) => setNouveauStatut(e.target.value as StatutMembre)}
-              style={input}
-            >
+            <label style={labelStyle}>Nouveau statut *</label>
+            <select value={nouveauStatut} onChange={(e) => setNouveauStatut(e.target.value as StatutMembre)} style={inputStyle}>
               {StatutMembreOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
 
-          {/* MOTIF */}
           <div>
-            <label style={label}>Motif</label>
-            <input
-              type="text"
-              value={motif}
-              onChange={(e) => setMotif(e.target.value)}
-              style={input}
-            />
+            <label style={labelStyle}>Motif</label>
+            <input type="text" value={motif} onChange={(e) => setMotif(e.target.value)} style={inputStyle} />
           </div>
 
           <button type="submit" disabled={loading} style={btnSave}>
@@ -210,84 +156,13 @@ export default function MemberHistoryFormPage() {
   );
 }
 
-/* 🎨 STYLES */
-
-const container = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  height: "90vh",
-  background: "#f4f6f9",
-};
-
-const card = {
-  background: "white",
-  padding: "30px",
-  borderRadius: "12px",
-  boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-  width: "420px",
-};
-
-const title = {
-  textAlign: "center" as const,
-  fontSize: "26px",
-  fontWeight: "bold",
-  color: "#2c3e50",
-  borderBottom: "2px solid #27ae60",
-  paddingBottom: "10px",
-  marginBottom: "20px",
-};
-
-const formStyle = {
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "15px",
-};
-
-const label = {
-  fontWeight: "bold",
-  marginBottom: "5px",
-  display: "block",
-};
-
-const input = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-};
-
-const btnSave = {
-  padding: "12px",
-  background: "#27ae60",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-  fontSize: "16px",
-};
-
-const btnBack = {
-  background: "#bdc3c7",
-  border: "none",
-  padding: "6px 12px",
-  borderRadius: "6px",
-  cursor: "pointer",
-  fontSize: "14px",
-};
-
-// ✅ Nouveau style bouton tableau de bord
-const btnDashboard = {
-  background: "#2563eb",
-  color: "white",
-  border: "none",
-  padding: "6px 12px",
-  borderRadius: "6px",
-  cursor: "pointer",
-  fontSize: "14px",
-};
-
-const errorStyle = {
-  color: "red",
-  textAlign: "center" as const,
-};
+const container = { display: "flex", justifyContent: "center", alignItems: "center", height: "90vh", background: "#f4f6f9" };
+const card = { background: "white", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)", width: "420px" };
+const title = { textAlign: "center" as const, fontSize: "26px", fontWeight: "bold", color: "#2c3e50", borderBottom: "2px solid #27ae60", paddingBottom: "10px", marginBottom: "20px" };
+const formStyle = { display: "flex", flexDirection: "column" as const, gap: "15px" };
+const labelStyle = { fontWeight: "bold", marginBottom: "5px", display: "block" };
+const inputStyle = { width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ccc" };
+const btnSave = { padding: "12px", background: "#27ae60", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "16px" };
+const btnBack = { background: "#bdc3c7", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "14px" };
+const btnDashboard = { background: "#2563eb", color: "white", border: "none", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "14px" };
+const errorStyle = { color: "red", textAlign: "center" as const };

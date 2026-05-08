@@ -110,7 +110,7 @@ export default function EmailCodeFormPage() {
                 value={digit}
                 onChange={(e) => handleChange(e.target.value, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                ref={(el) => (inputsRef.current[index] = el)}
+                ref={(el) => { inputsRef.current[index] = el; }}
                 style={styles.codeInput}
               />
             ))}

@@ -1,8 +1,14 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import type { GlobalRole } from '../hooks/useRole'
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth()
+interface Props {
+  children: React.ReactNode
+  roles?: GlobalRole[]
+}
+
+export default function ProtectedRoute({ children, roles }: Props) {
+  const { isAuthenticated, loading, role } = useAuth()
 
   if (loading) {
     return (
@@ -18,6 +24,10 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  if (roles && role && !roles.includes(role)) {
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>

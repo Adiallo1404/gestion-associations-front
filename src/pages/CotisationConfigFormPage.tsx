@@ -71,8 +71,6 @@ export default function CotisationFormPage() {
     }
   }, [form.associationId]);
 
-  const deviseLabel = DEVISES.find(d => d.code === form.devise)?.label || form.devise;
-
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!form.montant || Number(form.montant) <= 0) { toast.error("⚠️ Montant obligatoire et strictement positif"); return; }

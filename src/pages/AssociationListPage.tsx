@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAssociations, deleteAssociation } from '../api/associationService';
 import type { Association } from '../types/association';
 import ConfirmModal from '../components/ConfirmModal';
-import { useWindowSize } from '../hooks/useWindowSize'; // ✅
+import { useWindowSize } from '../hooks/useWindowSize';
 
 export default function AssociationListPage() {
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -11,7 +11,7 @@ export default function AssociationListPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
-  const { isMobile, isTablet } = useWindowSize(); // ✅
+  const { isMobile, isTablet } = useWindowSize();
 
   const [modal, setModal] = useState<{ isOpen: boolean; id: number | null; name: string }>
     ({ isOpen: false, id: null, name: '' });
@@ -74,7 +74,7 @@ export default function AssociationListPage() {
       {/* HEADER */}
       <div style={{
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'column',
+        flexDirection: 'column',
         alignItems: isMobile ? 'flex-start' : 'center',
         marginBottom: '1.5rem',
         gap: '1rem',
@@ -112,7 +112,7 @@ export default function AssociationListPage() {
       {filtered.length === 0 ? (
         <p style={st.message}>Aucune association trouvée.</p>
       ) : isMobile ? (
-        // ✅ CARDS sur mobile
+        // CARDS sur mobile
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map((assoc) => (
             <div key={assoc.id} style={st.mobileCard}>
@@ -123,17 +123,17 @@ export default function AssociationListPage() {
                 </div>
                 <span style={st.idBadge}>{assoc.id}</span>
               </div>
-              <div style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>{formatDate(assoc.dateCreation)}</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>{formatDate(assoc.dateCreation ?? '')}</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button style={{ ...st.btnVoir, flex: 1, justifyContent: 'center' }} onClick={() => navigate(`/associations/${assoc.id}`)}>Voir</button>
                 <button style={{ ...st.btnEdit, flex: 1, justifyContent: 'center' }} onClick={() => navigate(`/associations/${assoc.id}/edit`)}>Modifier</button>
-                <button style={{ ...st.btnDel, flex: 1, justifyContent: 'center' }} onClick={() => handleDeleteClick(assoc.id, assoc.name)}>Supprimer</button>
+                <button style={{ ...st.btnDel, flex: 1, justifyContent: 'center' }} onClick={() => handleDeleteClick(assoc.id, assoc.name ?? '')}>Supprimer</button>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        // ✅ TABLE sur tablette/desktop
+        // TABLE sur tablette/desktop
         <div style={st.card}>
           <table style={st.table}>
             <thead>
@@ -156,7 +156,7 @@ export default function AssociationListPage() {
                   <td style={st.td}><span style={st.idBadge}>{assoc.id}</span></td>
                   <td style={{ ...st.td, fontWeight: 500 }}>{assoc.name}</td>
                   <td style={st.td}><span style={st.cityBadge}>{assoc.city}</span></td>
-                  {!isTablet && <td style={st.td}><span style={st.dateText}>{formatDate(assoc.dateCreation)}</span></td>}
+                  {!isTablet && <td style={st.td}><span style={st.dateText}>{formatDate(assoc.dateCreation ?? '')}</span></td>}
                   <td style={st.td}>
                     <div style={st.actions}>
                       <button style={st.btnVoir} onClick={() => navigate(`/associations/${assoc.id}`)}>
@@ -172,7 +172,7 @@ export default function AssociationListPage() {
                         </svg>
                         {!isTablet && 'Modifier'}
                       </button>
-                      <button style={st.btnDel} onClick={() => handleDeleteClick(assoc.id, assoc.name)}>
+                      <button style={st.btnDel} onClick={() => handleDeleteClick(assoc.id, assoc.name ?? '')}>
                         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                           <polyline points="2,4 11,4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                           <path d="M5 4V3h3v1M4 4l1 7h4l1-7" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
