@@ -41,10 +41,13 @@ export default function MemberHistoryFormPage() {
 
   useEffect(() => {
     const loadMembers = async () => {
-      if (!associationId) return;
+      if (!associationId) {
+        setMembers([]);
+        return;
+      }
       try {
         const res = await getMembers({ page: 0, size: 1000 });
-        const filtered = res.content.filter(
+        const filtered = (res.content || []).filter(
           (m: any) => m.associationId === Number(associationId)
         );
         setMembers(filtered);
@@ -90,7 +93,6 @@ export default function MemberHistoryFormPage() {
         {error && <p style={errorStyle}>{error}</p>}
 
         <form onSubmit={handleSubmit} style={formStyle}>
-
           <div>
             <label style={labelStyle}>Association *</label>
             <select value={associationId} onChange={(e) => { setAssociationId(e.target.value); setMemberId(""); }} required style={inputStyle}>
@@ -115,7 +117,6 @@ export default function MemberHistoryFormPage() {
             <label style={labelStyle}>Modifié par</label>
             <select value={modifieParId} onChange={(e) => setModifieParId(e.target.value)} style={inputStyle}>
               <option value="">-- Système --</option>
-              {/* ✅ CORRIGÉ : firstName + lastName au lieu de username */}
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
               ))}
@@ -149,15 +150,15 @@ export default function MemberHistoryFormPage() {
           <button type="submit" disabled={loading} style={btnSave}>
             {loading ? "⏳ Création..." : "✅ Créer"}
           </button>
-
         </form>
       </div>
     </div>
   );
 }
 
-const container = { display: "flex", justifyContent: "center", alignItems: "center", height: "90vh", background: "#f4f6f9" };
-const card = { background: "white", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)", width: "420px" };
+// Styles inchangés
+const container = { display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f4f6f9", padding: "20px" };
+const card = { background: "white", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)", width: "100%", maxWidth: "420px" };
 const title = { textAlign: "center" as const, fontSize: "26px", fontWeight: "bold", color: "#2c3e50", borderBottom: "2px solid #27ae60", paddingBottom: "10px", marginBottom: "20px" };
 const formStyle = { display: "flex", flexDirection: "column" as const, gap: "15px" };
 const labelStyle = { fontWeight: "bold", marginBottom: "5px", display: "block" };

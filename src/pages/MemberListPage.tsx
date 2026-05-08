@@ -20,11 +20,11 @@ export default function MemberListPage() {
   const fetchData = async () => {
     try {
       const data = await memberService.getAll({ ...filters, page });
-      // On s'assure que data.content existe sinon on prend data
+      // ✅ Sécurisation du contenu de la réponse
       const content = data?.content || (Array.isArray(data) ? data : []);
       setMembers(content);
     } catch (err) { 
-      console.error(err); 
+      console.error("Erreur lors de la récupération des membres:", err); 
       setMembers([]);
     }
   };
@@ -41,7 +41,7 @@ export default function MemberListPage() {
       setModal({ isOpen: false, id: null, label: "" });
       fetchData();
     } catch (err) {
-      console.error(err);
+      console.error("Erreur suppression:", err);
       setModal({ isOpen: false, id: null, label: "" });
     }
   };
@@ -58,6 +58,7 @@ export default function MemberListPage() {
       { header: "Nom",         accessor: (m: Member) => m.lastName ?? "—",           width: 1.2 },
       { header: "Email",       accessor: (m: Member) => m.email ?? "—",              width: 2   },
       { header: "Téléphone",   accessor: (m: Member) => m.phone ?? "—",              width: 1.2 },
+      // ✅ Utilisation du cast (as any) pour éviter l'erreur TS sur associationName
       { header: "Association", accessor: (m: Member) => (m as any).associationName ?? "—",    width: 1.5 },
     ],
     data: members,
@@ -78,7 +79,7 @@ export default function MemberListPage() {
       <button style={btnBack} onClick={() => navigate('/')}>← Retour</button>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h2 style={{ color: "#2c3e50", margin: 0, fontSize: isMobile ? 16 : 22 }}>👥 Membres</h2>
+        <h2 style={{ color: "#2c3e50", margin: 0, fontSize: isMobile ? 18 : 22 }}>👥 Membres</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <ExportPdfButton isMobile={isMobile} options={pdfOptions} />
           <button style={btnAdd} onClick={() => navigate("/members/new")}>
@@ -113,12 +114,13 @@ export default function MemberListPage() {
       {isMobile ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {members.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#9ca3af" }}>Aucun membre trouvé</p>
+            <p style={{ textAlign: "center", color: "#9ca3af", padding: "20px" }}>Aucun membre trouvé</p>
           ) : members.map((m) => (
             <div key={m.id} style={{ background: "#fff", borderRadius: 10, padding: 14, border: "1px solid #eee", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{m.firstName} {m.lastName}</div>
               <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 2 }}>📧 {m.email}</div>
               {m.phone && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 2 }}>📞 {m.phone}</div>}
+              {/* ✅ Utilisation du cast (as any) ici aussi */}
               {(m as any).associationName && <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 10 }}>🏢 {(m as any).associationName}</div>}
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <button style={{ ...btnView, flex: 1 }} onClick={() => navigate(`/members/${m.id}`)}>👁️</button>
@@ -129,55 +131,57 @@ export default function MemberListPage() {
           ))}
         </div>
       ) : (
-        <table style={tableStyle}>
-          <thead>
-            <tr style={{ background: "#3498db", color: "white" }}>
-              <th style={thStyle}>Nom complet</th>
-              <th style={thStyle}>Email</th>
-              {!isTablet && <th style={thStyle}>Téléphone</th>}
-              {!isTablet && <th style={thStyle}>Association</th>}
-              <th style={thStyle}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Aucun membre trouvé</td></tr>
-            )}
-            {members.map((m) => (
-              <tr key={m.id} style={{ textAlign: "center", borderBottom: "1px solid #eee" }}>
-                <td style={tdStyle}>{m.firstName} {m.lastName}</td>
-                <td style={tdStyle}>{m.email}</td>
-                {!isTablet && <td style={tdStyle}>{m.phone}</td>}
-                {!isTablet && <td style={tdStyle}>{(m as any).associationName || "-"}</td>}
-                <td style={tdStyle}>
-                  <button style={btnView} onClick={() => navigate(`/members/${m.id}`)}>👁️</button>
-                  <button style={btnEdit} onClick={() => navigate(`/members/${m.id}/edit`)}>✏️</button>
-                  <button style={btnDelete} onClick={() => handleDeleteClick(m.id!, `${m.firstName} ${m.lastName}`)}>🗑️</button>
-                </td>
+        <div style={{ overflowX: "auto", background: "white", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+          <table style={tableStyle}>
+            <thead>
+              <tr style={{ background: "#3498db", color: "white" }}>
+                <th style={thStyle}>Nom complet</th>
+                <th style={thStyle}>Email</th>
+                {!isTablet && <th style={thStyle}>Téléphone</th>}
+                {!isTablet && <th style={thStyle}>Association</th>}
+                <th style={thStyle}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {members.length === 0 ? (
+                <tr><td colSpan={5} style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Aucun membre trouvé</td></tr>
+              ) : members.map((m) => (
+                <tr key={m.id} style={{ textAlign: "center", borderBottom: "1px solid #eee" }}>
+                  <td style={tdStyle}>{m.firstName} {m.lastName}</td>
+                  <td style={tdStyle}>{m.email}</td>
+                  {!isTablet && <td style={tdStyle}>{m.phone || "—"}</td>}
+                  {/* ✅ Utilisation du cast (as any) ici aussi */}
+                  {!isTablet && <td style={tdStyle}>{(m as any).associationName || "—"}</td>}
+                  <td style={tdStyle}>
+                    <button style={btnView} onClick={() => navigate(`/members/${m.id}`)}>👁️</button>
+                    <button style={btnEdit} onClick={() => navigate(`/members/${m.id}/edit`)}>✏️</button>
+                    <button style={btnDelete} onClick={() => handleDeleteClick(m.id!, `${m.firstName} ${m.lastName}`)}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <div style={{ marginTop: 16, textAlign: "center" }}>
+      <div style={{ marginTop: 16, display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}>
         <button style={btnPage} onClick={() => setPage(page - 1)} disabled={page === 0}>⬅</button>
-        <span style={{ margin: "0 10px", fontSize: isMobile ? 13 : 14 }}>Page {page + 1}</span>
+        <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600 }}>Page {page + 1}</span>
         <button style={btnPage} onClick={() => setPage(page + 1)}>➡</button>
       </div>
     </div>
   );
 }
 
-// --- STYLES ---
+// --- STYLES (Conservés et fixés) ---
 const inputStyle  = { padding: "8px", borderRadius: "6px", border: "1px solid #ccc" } as React.CSSProperties;
 const btnPrimary  = { padding: "8px 12px", background: "#3498db", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" } as React.CSSProperties;
 const btnAdd      = { padding: "10px 16px", background: "#2ecc71", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
 const btnView     = { marginRight: 5, background: "#3498db", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" } as React.CSSProperties;
 const btnEdit     = { marginRight: 5, background: "#27ae60", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" } as React.CSSProperties;
 const btnDelete   = { background: "#e74c3c", color: "white", border: "none", padding: "6px 8px", borderRadius: "5px", cursor: "pointer" } as React.CSSProperties;
-const btnPage     = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" } as React.CSSProperties;
-const tableStyle  = { width: "100%", borderCollapse: "collapse" as const, background: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" };
-const thStyle     = { padding: "12px 16px" } as React.CSSProperties;
+const btnPage     = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer", background: "white" } as React.CSSProperties;
+const tableStyle  = { width: "100%", borderCollapse: "collapse" as const };
+const thStyle     = { padding: "12px 16px", fontWeight: 600 } as React.CSSProperties;
 const tdStyle     = { padding: "10px 16px" } as React.CSSProperties;
 const btnBack     = { marginBottom: 16, padding: "8px 16px", background: "transparent", color: "#555", border: "1px solid #ccc", borderRadius: "6px", cursor: "pointer", fontSize: 14 } as React.CSSProperties;
