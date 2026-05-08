@@ -7,10 +7,7 @@ export interface Member {
   email: string;
   postalAddress?: string;
   active?: boolean;
-  associationId: number;
-  association?: {
-    id: number;
-    name: string;
-  };
+  associationId?: number;
+  associationName?: string;
   membershipDate?: string;
 }
