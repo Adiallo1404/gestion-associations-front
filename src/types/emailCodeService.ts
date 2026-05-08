@@ -1,4 +1,5 @@
-import api from './axiosConfig';
+
+import axios from "../api/axiosConfig";
 import type { EmailCode } from '../types/emailCode';
 
 export async function generateEmailCode(email: string): Promise<EmailCode> {

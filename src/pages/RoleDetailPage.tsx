@@ -4,7 +4,7 @@ import { roleService } from "../api/roleService";
 import type { RoleDto, Permission } from "../types/role";
 
 // ✅ Labels français
-const PERMISSION_LABELS: Record<Permission, string> = {
+  const PERMISSION_LABELS: Partial<Record<Permission, string>> = {
   USER_CREATE:          "Créer un utilisateur",
   USER_READ:            "Voir les utilisateurs",
   USER_UPDATE:          "Modifier un utilisateur",

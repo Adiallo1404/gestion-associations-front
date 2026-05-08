@@ -40,7 +40,7 @@ export async function createUser(user: CreateUserDto): Promise<User> {
   return response.data
 }
 
-export async function updateUser(id: number, user: User): Promise<User> {
+export async function updateUser(id: number, user: Omit<User, 'id'>): Promise<User> {
   const response = await api.put<User>(`${BASE_URL}/${id}`, user)
   return response.data
 }

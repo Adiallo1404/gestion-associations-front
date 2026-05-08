@@ -38,7 +38,7 @@ export default function MemberHistoryDetailPage() {
 
         // Récupération de l'utilisateur qui a modifié
         if (history.modifieParId) {
-          const usersRes = await getUsers({}, 0, 1000);
+          const usersRes = await getUsers(0, 1000);
           const u = (usersRes.content || []).find((x: any) => x.id === history.modifieParId);
           setUserName(u ? `${u.firstName} ${u.lastName}` : `User #${history.modifieParId}`);
         } else {
