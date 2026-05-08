@@ -26,19 +26,16 @@ export default function MemberHistoryDetailPage() {
         const history = await getMemberHistoryById(Number(id));
         setData(history);
 
-        // Récupération sécurisée du membre
         const membersRes = await memberService.getAll({ page: 0, size: 1000 });
         const m = (membersRes.content || []).find((x: any) => x.id === history.memberId);
         setMemberName(m ? `${m.firstName} ${m.lastName}` : `Membre #${history.memberId}`);
 
-        // Récupération de l'association
         const assocRes = await getAssociations(0, 1000);
         const a = (assocRes.content || []).find((x: any) => x.id === history.associationId);
         setAssociationName(a?.name || `Association #${history.associationId}`);
 
-        // Récupération de l'utilisateur qui a modifié
         if (history.modifieParId) {
-          const usersRes = await getUsers(0, 1000);
+          const usersRes = await getUsers({}, 0, 1000);
           const u = (usersRes.content || []).find((x: any) => x.id === history.modifieParId);
           setUserName(u ? `${u.firstName} ${u.lastName}` : `User #${history.modifieParId}`);
         } else {

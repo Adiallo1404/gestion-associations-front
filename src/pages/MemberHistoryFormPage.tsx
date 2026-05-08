@@ -33,7 +33,7 @@ export default function MemberHistoryFormPage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await getUsers(0, 1000);
+      const res = await getUsers({}, 0, 1000);
       setUsers(res.content || []);
     };
     load();
@@ -156,7 +156,6 @@ export default function MemberHistoryFormPage() {
   );
 }
 
-// Styles inchangés
 const container = { display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f4f6f9", padding: "20px" };
 const card = { background: "white", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)", width: "100%", maxWidth: "420px" };
 const title = { textAlign: "center" as const, fontSize: "26px", fontWeight: "bold", color: "#2c3e50", borderBottom: "2px solid #27ae60", paddingBottom: "10px", marginBottom: "20px" };

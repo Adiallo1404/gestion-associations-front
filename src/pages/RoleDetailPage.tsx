@@ -3,8 +3,7 @@ import { useParams } from "react-router-dom";
 import { roleService } from "../api/roleService";
 import type { RoleDto, Permission } from "../types/role";
 
-// ✅ Labels français
-  const PERMISSION_LABELS: Partial<Record<Permission, string>> = {
+const PERMISSION_LABELS: Partial<Record<Permission, string>> = {
   USER_CREATE:          "Créer un utilisateur",
   USER_READ:            "Voir les utilisateurs",
   USER_UPDATE:          "Modifier un utilisateur",
@@ -68,8 +67,6 @@ export default function RoleDetailPage() {
 
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 16px" }}>
-
-      {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>🔐 {role.name}</h2>
         <button onClick={() => window.location.href = "/roles"}
@@ -80,8 +77,6 @@ export default function RoleDetailPage() {
 
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
         <div style={{ padding: 24 }}>
-
-          {/* LIGNES */}
           {rows.map(({ label, value }) => (
             <div key={label} style={{ display: "flex", borderBottom: "1px solid #f3f4f6", padding: "12px 0" }}>
               <span style={{ width: 180, color: "#6b7280", fontSize: 14, fontWeight: 500, flexShrink: 0 }}>{label}</span>
@@ -89,7 +84,6 @@ export default function RoleDetailPage() {
             </div>
           ))}
 
-          {/* PERMISSIONS EN FRANÇAIS */}
           <div style={{ paddingTop: 16 }}>
             <span style={{ color: "#6b7280", fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>
               Permissions ({role.permissions?.length || 0})
@@ -101,7 +95,6 @@ export default function RoleDetailPage() {
                     background: "#ede9fe", color: "#5b21b6",
                     padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
                   }}>
-                    {/* ✅ Label français */}
                     {PERMISSION_LABELS[perm as Permission] || perm}
                   </span>
                 ))
@@ -112,7 +105,6 @@ export default function RoleDetailPage() {
           </div>
         </div>
 
-        {/* FOOTER */}
         <div style={{ padding: "16px 24px", background: "#f9fafb", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button onClick={() => window.location.href = `/roles/${id}/edit`}
             style={{ padding: "10px 20px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
