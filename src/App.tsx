@@ -4,7 +4,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import NotFoundPage from './pages/NotFoundPage'; // ✅ nouveau
+import NotFoundPage from './pages/NotFoundPage';
+import AboutPage from './pages/AboutPage';
 
 import DashboardPage from './pages/DashboardPage';
 import AssociationListPage from './pages/AssociationListPage';
@@ -71,6 +72,7 @@ function App() {
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password"  element={<ResetPasswordPage />} />
+            <Route path="/about"           element={<AboutPage />} />
 
             {/* ─── DASHBOARD ─── */}
             <Route path="/" element={<PR><DashboardPage /></PR>} />
@@ -85,9 +87,9 @@ function App() {
             <Route path="/associations/:id/edit"
               element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><AssociationFormPage /></PRL>} />
 
-              {/* ─── MON PROFIL ─── */}
-<Route path="/users/me"
-  element={<PR><MyProfilePage /></PR>} />
+            {/* ─── MON PROFIL ─── */}
+            <Route path="/users/me"
+              element={<PR><MyProfilePage /></PR>} />
 
             {/* ─── UTILISATEURS ─── */}
             <Route path="/users"
@@ -183,8 +185,6 @@ function App() {
             <Route path="/cotisation-configs/association/:associationId/edit"
               element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigFormPage /></PRL>} />
 
-            
-
             {/* ─── LIENS DE PARTAGE ─── */}
             <Route path="/liens-partage"
               element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><LienPartageListPage /></PRL>} />
@@ -194,7 +194,7 @@ function App() {
               element={<PR><LienPartageDetailPage /></PR>} />
 
             {/* ─── 404 ─── */}
-            <Route path="*" element={<NotFoundPage />} /> {/* ✅ nouveau */}
+            <Route path="*" element={<NotFoundPage />} />
 
           </Routes>
         </AuthProvider>

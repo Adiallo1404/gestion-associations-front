@@ -61,6 +61,7 @@ const ALL_MENU_SECTIONS = [
     items: [
       { label: "📄 Documents",        path: "/documents",     roles: ['SUPER_ADMIN', 'ADMIN'] },
       { label: "🔗 Liens de partage", path: "/liens-partage", roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "ℹ️ À propos",         path: "/about",         roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
     ],
   },
 ];
