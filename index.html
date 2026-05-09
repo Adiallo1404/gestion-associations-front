@@ -12,7 +12,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+      /* ✅ FIX : suppression de overflow:hidden et height:100% qui bloquaient le scroll */
+      html, body { width: 100%; min-height: 100%; }
+      #root { width: 100%; min-height: 100vh; }
     </style>
   </head>
   <body>

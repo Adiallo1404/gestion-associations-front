@@ -50,20 +50,30 @@
   }
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* ✅ FIX SCROLL : html et body sans contraintes */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
 body {
   margin: 0;
+}
+
+/* ✅ FIX SCROLL : #root prend toute la largeur pour le dashboard,
+   les pages publiques (landing, about…) gardent leur centrage via leurs propres conteneurs */
+#root {
+  width: 100%;          /* ← était 1126px, bloquait le dashboard plein écran */
+  max-width: 100%;
+  margin: 0;            /* ← plus de centrage global, chaque page gère le sien */
+  text-align: left;     /* ← était center, mauvais pour le dashboard */
+  border-inline: none;  /* ← supprimé, inutile en plein écran */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 h1,

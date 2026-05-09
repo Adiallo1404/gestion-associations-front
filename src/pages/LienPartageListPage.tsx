@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getLiensByFilters, deleteLien } from "../api/lienPartageService";
 import type { LienPartage, LienPartageFilters } from "../types/lienPartage";
-import { useWindowSize } from "../hooks/useWindowSize"; // ✅
+import { useWindowSize } from "../hooks/useWindowSize";
 
 const LienPartageListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isMobile, isTablet } = useWindowSize(); // ✅
+  const { isMobile, isTablet } = useWindowSize();
 
   const [liens, setLiens] = useState<LienPartage[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -37,7 +37,6 @@ const LienPartageListPage: React.FC = () => {
 
   useEffect(() => {
     fetchLiens();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, page]);
 
   const handleSearch = () => {
@@ -68,15 +67,24 @@ const LienPartageListPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "32px 40px" }}>
+    <div style={{ padding: isMobile ? "12px" : "32px 40px", background: "#f8fafc", minHeight: "100vh" }}>
+      
+      {/* ✅ FIL D'ARIANE (BREADCRUMB) */}
+      <nav style={breadcrumbStyle}>
+        <span style={breadcrumbHome} onClick={() => navigate("/")}>
+          🏠 Accueil
+        </span>
+        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbCurrent}>Liens de partage</span>
+      </nav>
 
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 16 }}>
-          <button style={btnBack} onClick={() => navigate("/dashboard")}>← Retour</button>
-          <h2 style={{ fontSize: isMobile ? 16 : 24, fontWeight: 500, margin: 0 }}>
+        <div>
+          <h2 style={{ fontSize: isMobile ? 18 : 32, fontWeight: 700, margin: 0, color: "#0f172a" }}>
             🔗 Liens de partage
           </h2>
+          {!isMobile && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 14 }}>Gérez les accès externes à vos documents</p>}
         </div>
         <button style={btnPrimary} onClick={() => navigate("/liens-partage/new")}>
           {isMobile ? "➕" : "+ Nouveau lien"}
@@ -85,14 +93,14 @@ const LienPartageListPage: React.FC = () => {
 
       {/* FILTRES */}
       <div style={{
-        border: "1px solid var(--border)", borderRadius: 12,
-        padding: isMobile ? 12 : "16px 20px",
+        background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
+        padding: isMobile ? 12 : "20px",
         marginBottom: 24,
         display: "flex", gap: 12,
         flexDirection: isMobile ? "column" : "row",
         flexWrap: "wrap", alignItems: "flex-end",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
       }}>
-        {/* Document ID — masqué sur mobile */}
         {!isMobile && (
           <div style={filterGroup}>
             <span style={label}>Document ID</span>
@@ -103,7 +111,6 @@ const LienPartageListPage: React.FC = () => {
             />
           </div>
         )}
-        {/* Créé par — masqué sur mobile */}
         {!isMobile && (
           <div style={filterGroup}>
             <span style={label}>Créé par (User ID)</span>
@@ -117,13 +124,13 @@ const LienPartageListPage: React.FC = () => {
         <div style={filterGroup}>
           <span style={label}>Statut</span>
           <select style={selectStyle} value={filterActif} onChange={(e) => setFilterActif(e.target.value)}>
-            <option value="">Tous</option>
+            <option value="">Tous les statuts</option>
             <option value="true">Actif</option>
             <option value="false">Inactif</option>
           </select>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-          <button style={btnPrimary} onClick={handleSearch}>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={btnSearch} onClick={handleSearch}>
             {isMobile ? "🔍" : "Rechercher"}
           </button>
           <button style={btnOutline} onClick={handleReset}>
@@ -132,53 +139,46 @@ const LienPartageListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ERREUR */}
       {error && (
-        <div style={{ border: "1px solid #fca5a5", background: "#fef2f2", color: "#dc2626", borderRadius: 8, padding: "10px 16px", fontSize: 14, marginBottom: 16 }}>
+        <div style={{ border: "1px solid #fca5a5", background: "#fef2f2", color: "#dc2626", borderRadius: 8, padding: "12px 16px", fontSize: 14, marginBottom: 16 }}>
           {error}
         </div>
       )}
 
       {/* CONTENU */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: "var(--text)", fontSize: 14 }}>Chargement...</div>
+        <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Chargement...</div>
       ) : isMobile ? (
-        // ✅ CARDS sur mobile
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {liens.length === 0 ? (
-            <p style={{ textAlign: "center", color: "var(--text)", padding: 40 }}>Aucun lien de partage trouvé.</p>
+            <p style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucun lien trouvé.</p>
           ) : liens.map((lien) => (
-            <div key={lien.id} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10, padding: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <code style={{ fontSize: 12, color: "var(--text-h)" }}>
+            <div key={lien.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <code style={{ fontSize: 12, color: "#475569", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>
                   {lien.token && lien.token.length > 20 ? lien.token.substring(0, 20) + "…" : lien.token}
                 </code>
                 <span style={lien.actif ? badgeSuccess : badgeSecondary}>
                   {lien.actif ? "Actif" : "Inactif"}
                 </span>
               </div>
-              <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 4 }}>
-                📅 {lien.dateExpiration ? new Date(lien.dateExpiration).toLocaleString("fr-FR") : "—"}
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+                📅 Exp : {lien.dateExpiration ? new Date(lien.dateExpiration).toLocaleDateString("fr-FR") : "Jamais"}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 10 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>
                 👁 {lien.nombreAccesActuel ?? 0} / {lien.nombreAccesMax ?? "∞"} · Doc #{lien.documentId}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...btnInfo, flex: 1 }} onClick={() => navigate(`/liens-partage/${lien.id}`)}>
-                  👁️ Détail
-                </button>
-                <button style={{ ...btnDanger, flex: 1 }} onClick={() => handleDelete(lien.id!)}>
-                  🗑️ Supprimer
-                </button>
+                <button style={{ ...btnInfo, flex: 1 }} onClick={() => navigate(`/liens-partage/${lien.id}`)}>👁️ Détail</button>
+                <button style={{ ...btnDanger, flex: 1 }} onClick={() => handleDelete(lien.id!)}>🗑️ Supprimer</button>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        // ✅ TABLE sur tablette/desktop
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead style={{ background: "var(--code-bg)" }}>
+            <thead style={{ background: "#F1F5F9" }}>
               <tr>
                 {!isTablet && <th style={th}>ID</th>}
                 <th style={th}>Token</th>
@@ -186,29 +186,26 @@ const LienPartageListPage: React.FC = () => {
                 <th style={th}>Accès</th>
                 <th style={th}>Statut</th>
                 {!isTablet && <th style={th}>Doc. ID</th>}
-                {!isTablet && <th style={th}>Créé par</th>}
                 <th style={th}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {liens.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: 40, textAlign: "center", color: "var(--text)", fontSize: 14 }}>
-                    Aucun lien de partage trouvé.
-                  </td>
+                  <td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Aucun lien trouvé.</td>
                 </tr>
               ) : (
                 liens.map((lien) => (
-                  <tr key={lien.id}>
-                    {!isTablet && <td style={tdMuted}>{lien.id}</td>}
+                  <tr key={lien.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    {!isTablet && <td style={tdMuted}>#{lien.id}</td>}
                     <td style={td}>
-                      <code style={{ fontSize: 13 }}>
+                      <code style={{ fontSize: 13, background: "#f8fafc", padding: "2px 4px", borderRadius: 4, color: "#334155" }}>
                         {lien.token && lien.token.length > 24 ? lien.token.substring(0, 24) + "…" : lien.token}
                       </code>
                     </td>
                     {!isTablet && (
                       <td style={tdMuted}>
-                        {lien.dateExpiration ? new Date(lien.dateExpiration).toLocaleString("fr-FR") : "-"}
+                        {lien.dateExpiration ? new Date(lien.dateExpiration).toLocaleString("fr-FR") : "∞"}
                       </td>
                     )}
                     <td style={td}>{lien.nombreAccesActuel ?? 0} / {lien.nombreAccesMax ?? "∞"}</td>
@@ -217,8 +214,7 @@ const LienPartageListPage: React.FC = () => {
                         {lien.actif ? "Actif" : "Inactif"}
                       </span>
                     </td>
-                    {!isTablet && <td style={tdMuted}>{lien.documentId}</td>}
-                    {!isTablet && <td style={tdMuted}>{lien.creeParId ?? "-"}</td>}
+                    {!isTablet && <td style={tdMuted}>#{lien.documentId}</td>}
                     <td style={td}>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button style={btnInfo} onClick={() => navigate(`/liens-partage/${lien.id}`)}>
@@ -239,46 +235,41 @@ const LienPartageListPage: React.FC = () => {
 
       {/* PAGINATION */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", gap: isMobile ? 4 : 6, justifyContent: "center", marginTop: 20, flexWrap: "wrap" }}>
-          <button
-            style={pageBtn(false)} disabled={page === 0}
-            onClick={() => setPage(page - 1)}
-          >‹</button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button key={i} style={pageBtn(page === i)} onClick={() => setPage(i)}>
-              {i + 1}
-            </button>
-          ))}
-          <button
-            style={pageBtn(false)} disabled={page === totalPages - 1}
-            onClick={() => setPage(page + 1)}
-          >›</button>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 24 }}>
+          <button style={pageBtn(false)} disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
+          <span style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
+            Page {page + 1}
+          </span>
+          <button style={pageBtn(false)} disabled={page === totalPages - 1} onClick={() => setPage(page + 1)}>›</button>
         </div>
       )}
     </div>
   );
 };
 
+// ── Styles Breadcrumb ──────────────────────────────────────────────────────────
+const breadcrumbStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 14 };
+const breadcrumbHome: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, color: "#64748b", cursor: "pointer", fontWeight: 500 };
+const breadcrumbSeparator: React.CSSProperties = { color: "#94a3b8", fontSize: 16 };
+const breadcrumbCurrent: React.CSSProperties = { color: "#0f172a", fontWeight: 600 };
+
 // ── Styles ────────────────────────────────────────────────────────────────────
-const btnBack    = { background: "transparent", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 16px", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 } as React.CSSProperties;
-const btnPrimary = { background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, cursor: "pointer" } as React.CSSProperties;
-const btnOutline = { background: "transparent", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 18px", fontSize: 14, cursor: "pointer" } as React.CSSProperties;
-const btnInfo    = { background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--accent-border)", borderRadius: 6, padding: "4px 12px", fontSize: 13, cursor: "pointer" } as React.CSSProperties;
-const btnDanger  = { background: "transparent", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 6, padding: "4px 12px", fontSize: 13, cursor: "pointer" } as React.CSSProperties;
-const filterGroup = { display: "flex", flexDirection: "column" as const, gap: 4, flex: 1, minWidth: 140 };
-const label      = { fontSize: 12, color: "var(--text)", fontWeight: 500 } as React.CSSProperties;
-const inputStyle = { border: "1px solid var(--border)", borderRadius: 8, padding: "7px 12px", fontSize: 14, color: "var(--text-h)", background: "var(--bg)", outline: "none" } as React.CSSProperties;
-const selectStyle = { border: "1px solid var(--border)", borderRadius: 8, padding: "7px 12px", fontSize: 14, color: "var(--text-h)", background: "var(--bg)", outline: "none", cursor: "pointer" } as React.CSSProperties;
-const th         = { padding: "10px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 12, color: "var(--text)", textTransform: "uppercase" as const, letterSpacing: "0.05em", borderBottom: "1px solid var(--border)" };
-const td         = { padding: "12px 16px", borderBottom: "1px solid var(--border)", color: "var(--text-h)", verticalAlign: "middle" as const } as React.CSSProperties;
-const tdMuted    = { padding: "12px 16px", borderBottom: "1px solid var(--border)", color: "var(--text)", verticalAlign: "middle" as const } as React.CSSProperties;
-const badgeSuccess   = { background: "rgba(34,197,94,0.12)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 500 } as React.CSSProperties;
-const badgeSecondary = { background: "var(--code-bg)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 500 } as React.CSSProperties;
+const btnPrimary = { background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 14, cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
+const btnSearch  = { background: "#0f172a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
+const btnOutline = { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer" } as React.CSSProperties;
+const btnInfo    = { background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
+const btnDanger  = { background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
+const filterGroup = { display: "flex", flexDirection: "column" as const, gap: 4, flex: 1, minWidth: 160 };
+const label      = { fontSize: 12, color: "#64748b", fontWeight: 600, textTransform: "uppercase" as const } as React.CSSProperties;
+const inputStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, background: "#fff", outline: "none" } as React.CSSProperties;
+const selectStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, background: "#fff", outline: "none", cursor: "pointer" } as React.CSSProperties;
+const th         = { padding: "12px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 12, color: "#475569", textTransform: "uppercase" as const, letterSpacing: "0.05em" };
+const td         = { padding: "14px 16px", color: "#1e293b", verticalAlign: "middle" as const } as React.CSSProperties;
+const tdMuted    = { padding: "14px 16px", color: "#64748b", verticalAlign: "middle" as const } as React.CSSProperties;
+const badgeSuccess   = { background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 } as React.CSSProperties;
+const badgeSecondary = { background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 } as React.CSSProperties;
 const pageBtn = (active: boolean): React.CSSProperties => ({
-  border: active ? "1px solid var(--accent)" : "1px solid var(--border)",
-  background: active ? "var(--accent-bg)" : "transparent",
-  color: active ? "var(--accent)" : "var(--text)",
-  borderRadius: 6, padding: "5px 12px", fontSize: 13, cursor: "pointer",
+  border: "1px solid #cbd5e1", background: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 14, cursor: "pointer", fontWeight: 600
 });
 
 export default LienPartageListPage;

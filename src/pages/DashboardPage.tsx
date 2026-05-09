@@ -274,10 +274,11 @@ export default function DashboardPage() {
   }, [location.pathname]);
 
   return (
+    // ✅ FIX SCROLL : suppression de overflow:"hidden" sur le conteneur racine
     <div style={{
-      display: "flex", width: "100%", height: "100vh",
+      display: "flex", width: "100%", minHeight: "100vh",
       fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-      background: "#f1f5f9", overflow: "hidden", position: "relative",
+      background: "#f1f5f9", position: "relative",
     }}>
 
       {isMobile && (
@@ -306,13 +307,18 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* ✅ FIX SCROLL sidebar : height:100vh + position:sticky pour desktop, fixed pour mobile */}
       {(!isMobile || sidebarOpen) && (
         <aside style={{
           width: isMobile ? 260 : isTablet ? 220 : 255,
           background: "#0f172a", display: "flex", flexDirection: "column",
-          flexShrink: 0, overflowY: "auto", height: "100%",
-          position: isMobile ? "fixed" : "relative",
-          top: isMobile ? 52 : 0, left: 0, bottom: 0,
+          flexShrink: 0, overflowY: "auto",
+          // Desktop/tablet : sticky pour rester visible au scroll
+          height: isMobile ? "calc(100% - 52px)" : "100vh",
+          position: isMobile ? "fixed" : "sticky",
+          top: isMobile ? 52 : 0,
+          left: 0,
+          alignSelf: "flex-start",
           zIndex: isMobile ? 160 : "auto",
         }}>
           {!isMobile && (
@@ -367,8 +373,11 @@ export default function DashboardPage() {
         </aside>
       )}
 
+      {/* ✅ FIX SCROLL main : overflow:auto + flex:1, plus de height:"100%" bloquant */}
       <main style={{
-        flex: 1, overflowY: "auto", overflowX: "hidden", height: "100%",
+        flex: 1,
+        minHeight: "100vh",
+        overflowX: "hidden",
         padding: isMobile ? "68px 12px 16px" : isTablet ? "20px 20px" : "24px 32px",
       }}>
 

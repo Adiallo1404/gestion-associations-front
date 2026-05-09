@@ -27,7 +27,6 @@ const UserAssociationRoleListPage = () => {
 
   useEffect(() => { loadData(); }, [page]);
 
-  // ✅ Utilisation de "username" ou "userName" selon ce que ton API renvoie réellement
   const handleDeleteClick = (id: number, userName?: string, roleName?: string) => {
     setModal({
       isOpen: true,
@@ -81,12 +80,19 @@ const UserAssociationRoleListPage = () => {
         onCancel={handleCancelDelete}
       />
 
-      <button style={s.btnBack} onClick={() => navigate("/")}>← Tableau de bord</button>
+      {/* ✅ FIL D'ARIANE (BREADCRUMB) AJOUTÉ ICI */}
+      <nav style={breadcrumbStyle}>
+        <span style={breadcrumbHome} onClick={() => navigate("/")}>
+          🏠 Accueil
+        </span>
+        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbCurrent}>Associations de Rôles</span>
+      </nav>
 
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 18 : 26, fontWeight: 700, color: "#0f172a" }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 18 : 32, fontWeight: 700, color: "#0f172a" }}>
             👥 Rôles & Associations
           </h1>
           {!isMobile && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 14 }}>
@@ -117,7 +123,6 @@ const UserAssociationRoleListPage = () => {
             <p style={s.empty}>Aucun rôle assigné</p>
           ) : roles.map((r, i) => {
             const av = AVATAR_COLORS[i % AVATAR_COLORS.length];
-            // ✅ Sécurité sur le nom de la propriété
             const currentUserName = (r as any).userName || (r as any).username || `Utilisateur #${r.userId}`;
             return (
               <div key={r.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
@@ -216,8 +221,36 @@ const UserAssociationRoleListPage = () => {
 
 export default UserAssociationRoleListPage;
 
+// --- STYLES BREADCRUMB ---
+const breadcrumbStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 20,
+  fontSize: 14,
+};
+
+const breadcrumbHome: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#64748b",
+  cursor: "pointer",
+  fontWeight: 500,
+};
+
+const breadcrumbSeparator: React.CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 16,
+};
+
+const breadcrumbCurrent: React.CSSProperties = {
+  color: "#0f172a",
+  fontWeight: 600,
+};
+
+// --- AUTRES STYLES ---
 const s: Record<string, React.CSSProperties> = {
-  btnBack:     { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 },
   btnPrimary:  { background: "#2563eb", color: "white", border: "none", padding: "10px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 },
   statCard:    { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 20px" },
   statLabel:   { fontSize: 12, color: "#64748b", marginBottom: 6, fontWeight: 500 },

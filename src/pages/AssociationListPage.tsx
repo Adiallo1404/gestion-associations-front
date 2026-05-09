@@ -4,6 +4,7 @@ import { getAssociations, deleteAssociation } from '../api/associationService';
 import type { Association } from '../types/association';
 import ConfirmModal from '../components/ConfirmModal';
 import { useWindowSize } from '../hooks/useWindowSize';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function AssociationListPage() {
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -71,30 +72,24 @@ export default function AssociationListPage() {
         onCancel={handleCancelDelete}
       />
 
+      {/* ✅ BREADCRUMB remplace le bouton "← Retour" */}
+      <Breadcrumb />
+
       {/* HEADER */}
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: isMobile ? 'flex-start' : 'center',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: '1.5rem',
-        gap: '1rem',
       }}>
-        <button style={st.btnBack} onClick={() => navigate('/')}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <h1 style={{ ...st.title, fontSize: isMobile ? '22px' : '32px' }}>Associations</h1>
+        <button style={st.btnCreate} onClick={() => navigate('/associations/new')}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+            <line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          Retour
+          {isMobile ? 'Créer' : 'Créer une association'}
         </button>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <h1 style={{ ...st.title, fontSize: isMobile ? '22px' : '32px' }}>Associations</h1>
-          <button style={st.btnCreate} onClick={() => navigate('/associations/new')}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-              <line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            {isMobile ? 'Créer' : 'Créer une association'}
-          </button>
-        </div>
       </div>
 
       {/* TOOLBAR */}
@@ -112,7 +107,6 @@ export default function AssociationListPage() {
       {filtered.length === 0 ? (
         <p style={st.message}>Aucune association trouvée.</p>
       ) : isMobile ? (
-        // CARDS sur mobile
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map((assoc) => (
             <div key={assoc.id} style={st.mobileCard}>
@@ -133,7 +127,6 @@ export default function AssociationListPage() {
           ))}
         </div>
       ) : (
-        // TABLE sur tablette/desktop
         <div style={st.card}>
           <table style={st.table}>
             <thead>
@@ -194,7 +187,6 @@ export default function AssociationListPage() {
 const st: Record<string, React.CSSProperties> = {
   page:        { background: '#F5F5F3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' },
   title:       { fontSize: '32px', fontWeight: 500, color: '#1a1a1a', margin: 0 },
-  btnBack:     { background: 'transparent', color: '#555', border: '0.5px solid #ccc', padding: '8px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
   btnCreate:   { background: '#185FA5', color: '#E6F1FB', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' },
   toolbar:     { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', flexWrap: 'wrap' },
   searchInput: { padding: '9px 14px', borderRadius: '8px', border: '0.5px solid #ccc', background: '#fff', fontSize: '14px', color: '#1a1a1a', outline: 'none' },

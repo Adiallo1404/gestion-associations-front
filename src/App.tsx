@@ -1,12 +1,17 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from "react";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Breadcrumb from './components/Breadcrumb'; // ✅ Ton composant
+import type { GlobalRole } from './hooks/useRole';
+
+// Import des pages
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AboutPage from './pages/AboutPage';
-
 import DashboardPage from './pages/DashboardPage';
 import AssociationListPage from './pages/AssociationListPage';
 import AssociationDetailPage from './pages/AssociationDetailPage';
@@ -46,8 +51,17 @@ import UserAssociationRoleListPage from "./pages/UserAssociationRoleListPage";
 import UserAssociationRoleDetailPage from "./pages/UserAssociationRoleDetailPage";
 import UserAssociationRoleFormPage from "./pages/UserAssociationRoleFormPage";
 import MyProfilePage from './pages/MyProfilePage';
-import type { GlobalRole } from './hooks/useRole';
 
+// ✅ Petit utilitaire pour remonter en haut de page lors d'un changement de route
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
+// Helpers pour les routes protégées
 const PR = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>{children}</ProtectedRoute>
 );
@@ -58,148 +72,112 @@ const PRL = ({ children, roles }: { children: React.ReactNode; roles: GlobalRole
 
 function App() {
   return (
-    <div style={{
-      margin: 0, padding: 0,
-      width: "100vw", height: "100vh",
-      overflow: "hidden", position: "fixed",
-      top: 0, left: 0,
-    }}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+    <BrowserRouter>
+      <ScrollToTop /> {/* ✅ Gère le reset du scroll */}
+      <AuthProvider>
+        <div style={{
+          minHeight: "100vh", // ✅ Prend tout l'écran
+          width: "100%",      // ✅ Largeur fluide
+          background: "#f8fafc", 
+          display: "flex",
+          flexDirection: "column"
+        }}>
+          
+          {/* ✅ Zone du Breadcrumb (Padding horizontal aligné sur tes pages) */}
+          <div style={{ padding: "0 40px" }}>
+            <Breadcrumb />
+          </div>
 
-            {/* ─── PUBLIC ─── */}
-            <Route path="/login"           element={<LoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password"  element={<ResetPasswordPage />} />
-            <Route path="/about"           element={<AboutPage />} />
+          {/* ✅ Zone de contenu principal qui gère son propre défilement naturellement */}
+          <main style={{ flex: 1 }}>
+            <Routes>
+              {/* ─── PUBLIC ─── */}
+              <Route path="/login"           element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password"  element={<ResetPasswordPage />} />
+              <Route path="/about"           element={<AboutPage />} />
 
-            {/* ─── DASHBOARD ─── */}
-            <Route path="/" element={<PR><DashboardPage /></PR>} />
+              {/* ─── DASHBOARD ─── */}
+              <Route path="/" element={<PR><DashboardPage /></PR>} />
 
-            {/* ─── ASSOCIATIONS ─── */}
-            <Route path="/associations"
-              element={<PR><AssociationListPage /></PR>} />
-            <Route path="/associations/new"
-              element={<PRL roles={['SUPER_ADMIN']}><AssociationFormPage /></PRL>} />
-            <Route path="/associations/:id"
-              element={<PR><AssociationDetailPage /></PR>} />
-            <Route path="/associations/:id/edit"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><AssociationFormPage /></PRL>} />
+              {/* ─── ASSOCIATIONS ─── */}
+              <Route path="/associations" element={<PR><AssociationListPage /></PR>} />
+              <Route path="/associations/new" element={<PRL roles={['SUPER_ADMIN']}><AssociationFormPage /></PRL>} />
+              <Route path="/associations/:id" element={<PR><AssociationDetailPage /></PR>} />
+              <Route path="/associations/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><AssociationFormPage /></PRL>} />
 
-            {/* ─── MON PROFIL ─── */}
-            <Route path="/users/me"
-              element={<PR><MyProfilePage /></PR>} />
+              {/* ─── MON PROFIL ─── */}
+              <Route path="/users/me" element={<PR><MyProfilePage /></PR>} />
 
-            {/* ─── UTILISATEURS ─── */}
-            <Route path="/users"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserListPage /></PRL>} />
-            <Route path="/users/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserFormPage /></PRL>} />
-            <Route path="/users/:id"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserDetailPage /></PRL>} />
-            <Route path="/users/:id/edit"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserFormPage /></PRL>} />
+              {/* ─── UTILISATEURS ─── */}
+              <Route path="/users" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserListPage /></PRL>} />
+              <Route path="/users/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserFormPage /></PRL>} />
+              <Route path="/users/:id" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserDetailPage /></PRL>} />
+              <Route path="/users/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserFormPage /></PRL>} />
 
-            {/* ─── MEMBRES ─── */}
-            <Route path="/members"
-              element={<PR><MemberListPage /></PR>} />
-            <Route path="/members/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberFormPage /></PRL>} />
-            <Route path="/members/:id"
-              element={<PR><MemberDetailPage /></PR>} />
-            <Route path="/members/:id/edit"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberFormPage /></PRL>} />
+              {/* ─── MEMBRES ─── */}
+              <Route path="/members" element={<PR><MemberListPage /></PR>} />
+              <Route path="/members/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberFormPage /></PRL>} />
+              <Route path="/members/:id" element={<PR><MemberDetailPage /></PR>} />
+              <Route path="/members/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberFormPage /></PRL>} />
 
-            {/* ─── HISTORIQUE MEMBRES ─── */}
-            <Route path="/member-histories"
-              element={<PR><MemberHistoryListPage /></PR>} />
-            <Route path="/member-histories/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberHistoryFormPage /></PRL>} />
-            <Route path="/member-histories/:id"
-              element={<PR><MemberHistoryDetailPage /></PR>} />
+              {/* ─── HISTORIQUE MEMBRES ─── */}
+              <Route path="/member-histories" element={<PR><MemberHistoryListPage /></PR>} />
+              <Route path="/member-histories/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberHistoryFormPage /></PRL>} />
+              <Route path="/member-histories/:id" element={<PR><MemberHistoryDetailPage /></PR>} />
 
-            {/* ─── COTISATIONS ─── */}
-            <Route path="/cotisations"
-              element={<PR><CotisationListPage /></PR>} />
-            <Route path="/cotisations/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationFormPage /></PRL>} />
-            <Route path="/cotisations/:id"
-              element={<PR><CotisationDetailPage /></PR>} />
-            <Route path="/cotisations/:id/edit"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationFormPage /></PRL>} />
+              {/* ─── COTISATIONS ─── */}
+              <Route path="/cotisations" element={<PR><CotisationListPage /></PR>} />
+              <Route path="/cotisations/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationFormPage /></PRL>} />
+              <Route path="/cotisations/:id" element={<PR><CotisationDetailPage /></PR>} />
+              <Route path="/cotisations/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationFormPage /></PRL>} />
 
-            {/* ─── EMAILS ENVOYÉS ─── */}
-            <Route path="/emails-envoyes"
-              element={<PR><EmailListPage /></PR>} />
-            <Route path="/emails-envoyes/new"
-              element={<PR><EmailFormPage /></PR>} />
-            <Route path="/emails-envoyes/:id"
-              element={<PR><EmailDetailPage /></PR>} />
-            <Route path="/email-codes"
-              element={<PR><EmailCodeFormPage /></PR>} />
+              {/* ─── EMAILS ENVOYÉS ─── */}
+              <Route path="/emails-envoyes" element={<PR><EmailListPage /></PR>} />
+              <Route path="/emails-envoyes/new" element={<PR><EmailFormPage /></PR>} />
+              <Route path="/emails-envoyes/:id" element={<PR><EmailDetailPage /></PR>} />
+              <Route path="/email-codes" element={<PR><EmailCodeFormPage /></PR>} />
 
-            {/* ─── DOCUMENTS ─── */}
-            <Route path="/documents"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><DocumentListPage /></PRL>} />
-            <Route path="/documents/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><DocumentFormPage /></PRL>} />
-            <Route path="/documents/:id"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><DocumentDetailPage /></PRL>} />
+              {/* ─── DOCUMENTS ─── */}
+              <Route path="/documents" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><DocumentListPage /></PRL>} />
+              <Route path="/documents/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><DocumentFormPage /></PRL>} />
+              <Route path="/documents/:id" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><DocumentDetailPage /></PRL>} />
 
-            {/* ─── NOTIFICATIONS ─── */}
-            <Route path="/notifications"
-              element={<PR><NotificationListPage /></PR>} />
-            <Route path="/notifications/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><NotificationFormPage /></PRL>} />
-            <Route path="/notifications/:id"
-              element={<PR><NotificationDetailPage /></PR>} />
+              {/* ─── NOTIFICATIONS ─── */}
+              <Route path="/notifications" element={<PR><NotificationListPage /></PR>} />
+              <Route path="/notifications/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><NotificationFormPage /></PRL>} />
+              <Route path="/notifications/:id" element={<PR><NotificationDetailPage /></PR>} />
 
-            {/* ─── RÔLES ─── */}
-            <Route path="/roles"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><RoleListPage /></PRL>} />
-            <Route path="/roles/new"
-              element={<PRL roles={['SUPER_ADMIN']}><RoleFormPage /></PRL>} />
-            <Route path="/roles/:id"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><RoleDetailPage /></PRL>} />
-            <Route path="/roles/:id/edit"
-              element={<PRL roles={['SUPER_ADMIN']}><RoleFormPage /></PRL>} />
+              {/* ─── RÔLES ─── */}
+              <Route path="/roles" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><RoleListPage /></PRL>} />
+              <Route path="/roles/new" element={<PRL roles={['SUPER_ADMIN']}><RoleFormPage /></PRL>} />
+              <Route path="/roles/:id" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><RoleDetailPage /></PRL>} />
+              <Route path="/roles/:id/edit" element={<PRL roles={['SUPER_ADMIN']}><RoleFormPage /></PRL>} />
 
-            {/* ─── USER-ASSOCIATION-ROLES ─── */}
-            <Route path="/user-association-roles"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleListPage /></PRL>} />
-            <Route path="/user-association-roles/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleFormPage /></PRL>} />
-            <Route path="/user-association-roles/:userId/:associationId"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleDetailPage /></PRL>} />
-            <Route path="/user-association-roles/:id/edit"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleFormPage /></PRL>} />
+              {/* ─── USER-ASSOCIATION-ROLES ─── */}
+              <Route path="/user-association-roles" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleListPage /></PRL>} />
+              <Route path="/user-association-roles/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleFormPage /></PRL>} />
+              <Route path="/user-association-roles/:userId/:associationId" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleDetailPage /></PRL>} />
+              <Route path="/user-association-roles/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserAssociationRoleFormPage /></PRL>} />
 
-            {/* ─── COTISATION CONFIG ─── */}
-            <Route path="/cotisation-configs"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigListPage /></PRL>} />
-            <Route path="/cotisation-configs/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigFormPage /></PRL>} />
-            <Route path="/cotisation-configs/association/:associationId"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigDetailPage /></PRL>} />
-            <Route path="/cotisation-configs/association/:associationId/edit"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigFormPage /></PRL>} />
+              {/* ─── COTISATION CONFIG ─── */}
+              <Route path="/cotisation-configs" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigListPage /></PRL>} />
+              <Route path="/cotisation-configs/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigFormPage /></PRL>} />
+              <Route path="/cotisation-configs/association/:associationId" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigDetailPage /></PRL>} />
+              <Route path="/cotisation-configs/association/:associationId/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigFormPage /></PRL>} />
 
-            {/* ─── LIENS DE PARTAGE ─── */}
-            <Route path="/liens-partage"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><LienPartageListPage /></PRL>} />
-            <Route path="/liens-partage/new"
-              element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><LienPartageFormPage /></PRL>} />
-            <Route path="/liens-partage/:id"
-              element={<PR><LienPartageDetailPage /></PR>} />
+              {/* ─── LIENS DE PARTAGE ─── */}
+              <Route path="/liens-partage" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><LienPartageListPage /></PRL>} />
+              <Route path="/liens-partage/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><LienPartageFormPage /></PRL>} />
+              <Route path="/liens-partage/:id" element={<PR><LienPartageDetailPage /></PR>} />
 
-            {/* ─── 404 ─── */}
-            <Route path="*" element={<NotFoundPage />} />
-
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </div>
+              {/* ─── 404 ─── */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </main>
+        </div>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

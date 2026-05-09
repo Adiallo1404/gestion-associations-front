@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { roleService } from "../api/roleService";
 import type { RoleDto } from "../types/role";
 import ConfirmModal from "../components/ConfirmModal";
-import { useWindowSize } from "../hooks/useWindowSize"; // ✅
+import { useWindowSize } from "../hooks/useWindowSize";
 
 export default function RoleListPage() {
   const navigate = useNavigate();
-  const { isMobile, isTablet } = useWindowSize(); // ✅
+  const { isMobile, isTablet } = useWindowSize();
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -52,7 +52,7 @@ export default function RoleListPage() {
   const handleCancelDelete = () => setModal({ isOpen: false, id: null, label: '' });
 
   const statCards = [
-    { label: "Total",            value: stats.total,           color: "#111827", bg: "#f9fafb" },
+    { label: "Total",             value: stats.total,           color: "#111827", bg: "#f9fafb" },
     { label: "Avec permissions", value: stats.avecPermissions, color: "#185FA5", bg: "#E6F1FB" },
     { label: "Sans permissions", value: stats.sansPermissions, color: "#b45309", bg: "#fefce8" },
   ];
@@ -70,17 +70,29 @@ export default function RoleListPage() {
         onCancel={handleCancelDelete}
       />
 
-      <button style={btnBack} onClick={() => navigate("/")}>← Tableau de bord</button>
+      {/* ✅ BREADCRUMB AJOUTÉ ICI */}
+      <nav style={breadcrumbStyle}>
+        <span 
+          style={breadcrumbHome} 
+          onClick={() => navigate("/")}
+        >
+          🏠 Accueil
+        </span>
+        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbCurrent}>
+          Rôles
+        </span>
+      </nav>
 
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ color: "#2c3e50", margin: 0, fontSize: isMobile ? 16 : 22 }}>🔐 Rôles</h2>
+        <h2 style={{ color: "#2c3e50", margin: 0, fontSize: isMobile ? 18 : 32 }}>🔐 Rôles</h2>
         <button style={btnAdd} onClick={() => navigate("/roles/new")}>
           {isMobile ? "➕" : "➕ Créer un rôle"}
         </button>
       </div>
 
-      {/* STATS — 3 colonnes desktop, 1 ligne scrollable mobile */}
+      {/* STATS */}
       <div style={{
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(3, minmax(0,1fr))",
@@ -109,9 +121,8 @@ export default function RoleListPage() {
         </button>
       </div>
 
-      {/* CONTENU */}
+      {/* CONTENU (CARDS OR TABLE) */}
       {isMobile ? (
-        // ✅ CARDS sur mobile
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {roles.length === 0 ? (
             <p style={{ textAlign: "center", color: "#9ca3af", padding: 40 }}>Aucun rôle trouvé</p>
@@ -143,10 +154,9 @@ export default function RoleListPage() {
           ))}
         </div>
       ) : (
-        // ✅ TABLE sur tablette/desktop
         <table style={tableStyle}>
           <thead>
-            <tr style={{ background: "#8b5cf6", color: "white" }}>
+            <tr style={{ background: "#E6F1FB", color: "#0C447C" }}>
               <th style={thStyle}>Nom</th>
               {!isTablet && <th style={thStyle}>Description</th>}
               <th style={thStyle}>Permissions</th>
@@ -207,15 +217,42 @@ export default function RoleListPage() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const btnBack    = { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 } as React.CSSProperties;
+// ── Styles Breadcrumb ──────────────────────────────────────────────────────────
+const breadcrumbStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 16,
+  fontSize: 14,
+};
+
+const breadcrumbHome: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#6b7280",
+  cursor: "pointer",
+  fontWeight: 500,
+};
+
+const breadcrumbSeparator: React.CSSProperties = {
+  color: "#9ca3af",
+  fontSize: 16,
+};
+
+const breadcrumbCurrent: React.CSSProperties = {
+  color: "#111827",
+  fontWeight: 600,
+};
+
+// ── Autres Styles ──────────────────────────────────────────────────────────────
 const inputStyle = { padding: "8px 12px", borderRadius: "6px", border: "1px solid #ccc" } as React.CSSProperties;
 const btnPrimary = { padding: "8px 12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" } as React.CSSProperties;
 const btnAdd     = { padding: "10px 16px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
-const btnView    = { marginRight: 4, background: "#3b82f6", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" } as React.CSSProperties;
-const btnEdit    = { marginRight: 4, background: "#f59e0b", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" } as React.CSSProperties;
-const btnDelete  = { background: "#e74c3c", color: "white", border: "none", padding: "6px 8px", borderRadius: 5, cursor: "pointer" } as React.CSSProperties;
+const btnView    = { marginRight: 4, background: "#f5f5f5", color: "#333", border: "1px solid #ccc", padding: "6px 8px", borderRadius: 5, cursor: "pointer" } as React.CSSProperties;
+const btnEdit    = { marginRight: 4, background: "#EAF3DE", color: "#6de50b", border: "1px solid #C0DD97", padding: "6px 8px", borderRadius: 5, cursor: "pointer" } as React.CSSProperties;
+const btnDelete  = { background: "#FCEBEB", color: "#ee1111", border: "1px solid #F7C1C1", padding: "6px 8px", borderRadius: 5, cursor: "pointer" } as React.CSSProperties;
 const btnPage    = { padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer" } as React.CSSProperties;
 const tableStyle = { width: "100%", borderCollapse: "collapse" as const, background: "white", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" };
-const thStyle    = { padding: "12px 16px" } as React.CSSProperties;
+const thStyle    = { padding: "14px 16px", textAlign: "center" as const, fontWeight: 500, fontSize: 13, borderBottom: "1px solid #B5D4F4" };
 const tdStyle    = { padding: "10px 16px" } as React.CSSProperties;

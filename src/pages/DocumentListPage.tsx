@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { getDocumentsByAssociation, deactivateDocument } from "../api/documentService";
 import api from "../api/axiosConfig";
 import type { DocumentDto } from "../types/document";
-import { useWindowSize } from "../hooks/useWindowSize"; // ✅
+import { useWindowSize } from "../hooks/useWindowSize";
 
 type Association = { id: number; name: string };
 
 const DocumentListPage = () => {
   const navigate = useNavigate();
-  const { isMobile, isTablet } = useWindowSize(); // ✅
+  const { isMobile, isTablet } = useWindowSize();
   const [associations, setAssociations] = useState<Association[]>([]);
   const [associationId, setAssociationId] = useState<string>("");
   const [documents, setDocuments] = useState<DocumentDto[]>([]);
@@ -86,17 +86,24 @@ const DocumentListPage = () => {
   };
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "32px 16px" }}>
+    <div style={{ padding: isMobile ? "12px" : "32px 40px", background: "#f8fafc", minHeight: "100vh" }}>
 
-      <button onClick={() => navigate("/")} style={btnBack}>
-        ← Retour au tableau de bord
-      </button>
+      {/* ✅ FIL D'ARIANE (BREADCRUMB) */}
+      <nav style={breadcrumbStyle}>
+        <span style={breadcrumbHome} onClick={() => navigate("/")}>
+          🏠 Accueil
+        </span>
+        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbCurrent}>Documents</span>
+      </nav>
 
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 24, fontWeight: 700 }}>📄 Documents</h2>
-          {!isMobile && <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 14 }}>Gestion des documents par association</p>}
+          <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 32, fontWeight: 700, color: "#0f172a" }}>
+            📄 Documents
+          </h2>
+          {!isMobile && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 14 }}>Gestion des documents par association</p>}
         </div>
         <button onClick={() => navigate("/documents/new")} style={btnAdd}>
           {isMobile ? "➕" : "+ Nouveau document"}
@@ -104,12 +111,12 @@ const DocumentListPage = () => {
       </div>
 
       {/* Filtre association */}
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: isMobile ? 12 : 20, marginBottom: 24 }}>
+      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: isMobile ? 12 : 20, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
           <select
             value={associationId}
             onChange={(e) => setAssociationId(e.target.value)}
-            style={{ flex: 1, padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, background: "#fff", cursor: "pointer" }}
+            style={selectStyle}
           >
             <option value="">-- Choisir une association --</option>
             {associations.map((a) => (
@@ -128,57 +135,42 @@ const DocumentListPage = () => {
         </div>
       )}
 
-      {loading && <div style={{ textAlign: "center", padding: 32, color: "#6b7280" }}>Chargement...</div>}
+      {loading && <div style={{ textAlign: "center", padding: 32, color: "#64748b" }}>Chargement...</div>}
 
       {!loading && searched && (
         isMobile ? (
-          // ✅ CARDS sur mobile
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {documents.length === 0 ? (
-              <p style={{ textAlign: "center", color: "#9ca3af" }}>Aucun document trouvé</p>
+              <p style={{ textAlign: "center", color: "#94a3b8" }}>Aucun document trouvé</p>
             ) : documents.map((doc) => (
-              <div key={doc.id} style={{ background: "#fff", borderRadius: 10, padding: 14, border: "1px solid #eee" }}>
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>
+              <div key={doc.id} style={{ background: "#fff", borderRadius: 12, padding: 14, border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, color: "#1e293b" }}>
                   {doc.nomOriginal ?? doc.nomFichier}
                 </div>
-                <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 6 }}>
+                <div style={{ color: "#64748b", fontSize: 12, marginBottom: 6 }}>
                   #{doc.id} · {doc.typeDocument?.replace(/_/g, " ") ?? "—"}
                 </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
                   {badgeFormat(doc.formatFichier)}
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>{formatTaille(doc.tailleOctets)}</span>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>
-                    {doc.dateUpload ? new Date(doc.dateUpload).toLocaleDateString("fr-FR") : "—"}
-                  </span>
-                  <span style={{ padding: "2px 10px", background: doc.actif ? "#f0fdf4" : "#fef2f2", color: doc.actif ? "#16a34a" : "#dc2626", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>{formatTaille(doc.tailleOctets)}</span>
+                  <span style={{ padding: "2px 10px", background: doc.actif ? "#f0fdf4" : "#fef2f2", color: doc.actif ? "#16a34a" : "#dc2626", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
                     {doc.actif ? "Actif" : "Inactif"}
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={() => navigate(`/documents/${doc.id}`)}
-                    style={{ ...btnDetail, flex: 1 }}
-                  >
-                    👁️ Détail
-                  </button>
+                  <button onClick={() => navigate(`/documents/${doc.id}`)} style={{ ...btnDetail, flex: 1 }}>👁️ Détail</button>
                   {doc.actif && (
-                    <button
-                      onClick={() => handleDeactivate(doc.id!)}
-                      style={{ ...btnDeactivate, flex: 1 }}
-                    >
-                      🚫 Désactiver
-                    </button>
+                    <button onClick={() => handleDeactivate(doc.id!)} style={{ ...btnDeactivate, flex: 1 }}>🚫 Désactiver</button>
                   )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          // ✅ TABLE sur tablette/desktop
-          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
-                <tr style={{ background: "#4f46e5", color: "white" }}>
+                <tr style={{ background: "#E6F1FB", color: "#0C447C" }}>
                   {!isTablet && <th style={thStyle}>#</th>}
                   <th style={thStyle}>Nom du fichier</th>
                   {!isTablet && <th style={thStyle}>Type</th>}
@@ -192,25 +184,23 @@ const DocumentListPage = () => {
               <tbody>
                 {documents.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>
-                      Aucun document trouvé
-                    </td>
+                    <td colSpan={8} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Aucun document trouvé</td>
                   </tr>
                 ) : (
-                  documents.map((doc, i) => (
-                    <tr key={doc.id} style={{ borderBottom: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                      {!isTablet && <td style={{ ...tdStyle, color: "#9ca3af", fontWeight: 600 }}>#{doc.id}</td>}
-                      <td style={{ ...tdStyle, fontWeight: 500, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  documents.map((doc) => (
+                    <tr key={doc.id} style={{ borderBottom: "1px solid #f1f5f9", background: "white" }}>
+                      {!isTablet && <td style={{ ...tdStyle, color: "#94a3b8", fontWeight: 600 }}>#{doc.id}</td>}
+                      <td style={{ ...tdStyle, fontWeight: 500, color: "#1e293b", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {doc.nomOriginal ?? doc.nomFichier}
                       </td>
-                      {!isTablet && <td style={{ ...tdStyle, color: "#6b7280", fontSize: 13 }}>{doc.typeDocument?.replace(/_/g, " ") ?? "—"}</td>}
+                      {!isTablet && <td style={{ ...tdStyle, color: "#64748b", fontSize: 13 }}>{doc.typeDocument?.replace(/_/g, " ") ?? "—"}</td>}
                       <td style={tdStyle}>{badgeFormat(doc.formatFichier)}</td>
-                      {!isTablet && <td style={{ ...tdStyle, color: "#6b7280" }}>{formatTaille(doc.tailleOctets)}</td>}
-                      <td style={{ ...tdStyle, color: "#6b7280", fontSize: 13 }}>
+                      {!isTablet && <td style={{ ...tdStyle, color: "#64748b" }}>{formatTaille(doc.tailleOctets)}</td>}
+                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 13 }}>
                         {doc.dateUpload ? new Date(doc.dateUpload).toLocaleDateString("fr-FR") : "—"}
                       </td>
                       <td style={tdStyle}>
-                        <span style={{ padding: "2px 10px", background: doc.actif ? "#f0fdf4" : "#fef2f2", color: doc.actif ? "#16a34a" : "#dc2626", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                        <span style={{ padding: "4px 12px", background: doc.actif ? "#f0fdf4" : "#fef2f2", color: doc.actif ? "#16a34a" : "#dc2626", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
                           {doc.actif ? "Actif" : "Inactif"}
                         </span>
                       </td>
@@ -237,29 +227,23 @@ const DocumentListPage = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", justifyContent: "center", gap: isMobile ? 4 : 8, marginTop: 24, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }}>
           <button
             onClick={() => { const p = page - 1; setPage(p); fetchDocuments(p, associationId); }}
             disabled={page === 0}
-            style={{ padding: isMobile ? "6px 10px" : "8px 16px", border: "1px solid #d1d5db", borderRadius: 6, background: page === 0 ? "#f9fafb" : "#fff", color: page === 0 ? "#9ca3af" : "#374151", cursor: page === 0 ? "default" : "pointer", fontSize: isMobile ? 12 : 14 }}
+            style={{ ...btnPage, opacity: page === 0 ? 0.5 : 1 }}
           >
-            ← {!isMobile && "Précédent"}
+            ←
           </button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => { setPage(i); fetchDocuments(i, associationId); }}
-              style={{ padding: isMobile ? "6px 10px" : "8px 14px", border: "1px solid #d1d5db", borderRadius: 6, background: page === i ? "#4f46e5" : "#fff", color: page === i ? "#fff" : "#374151", cursor: "pointer", fontWeight: page === i ? 700 : 400, fontSize: isMobile ? 12 : 14 }}
-            >
-              {i + 1}
-            </button>
-          ))}
+          <span style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
+            Page {page + 1} sur {totalPages}
+          </span>
           <button
             onClick={() => { const p = page + 1; setPage(p); fetchDocuments(p, associationId); }}
             disabled={page === totalPages - 1}
-            style={{ padding: isMobile ? "6px 10px" : "8px 16px", border: "1px solid #d1d5db", borderRadius: 6, background: page === totalPages - 1 ? "#f9fafb" : "#fff", color: page === totalPages - 1 ? "#9ca3af" : "#374151", cursor: page === totalPages - 1 ? "default" : "pointer", fontSize: isMobile ? 12 : 14 }}
+            style={{ ...btnPage, opacity: page === totalPages - 1 ? 0.5 : 1 }}
           >
-            {!isMobile && "Suivant"} →
+            →
           </button>
         </div>
       )}
@@ -267,13 +251,42 @@ const DocumentListPage = () => {
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const btnBack      = { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 } as React.CSSProperties;
-const btnAdd       = { padding: "10px 16px", background: "#4f46e5", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 } as React.CSSProperties;
-const btnSearch    = { padding: "10px 20px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500 } as React.CSSProperties;
-const btnDetail    = { padding: "6px 12px", background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 500 } as React.CSSProperties;
+// ── Styles Breadcrumb ──────────────────────────────────────────────────────────
+const breadcrumbStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 20,
+  fontSize: 14,
+};
+
+const breadcrumbHome: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#64748b",
+  cursor: "pointer",
+  fontWeight: 500,
+};
+
+const breadcrumbSeparator: React.CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 16,
+};
+
+const breadcrumbCurrent: React.CSSProperties = {
+  color: "#0f172a",
+  fontWeight: 600,
+};
+
+// ── Autres Styles ──────────────────────────────────────────────────────────────
+const selectStyle = { flex: 1, padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, background: "#fff", cursor: "pointer" } as React.CSSProperties;
+const btnAdd      = { padding: "10px 16px", background: "#2563eb", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 } as React.CSSProperties;
+const btnSearch   = { padding: "10px 20px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500, color: "#334155" } as React.CSSProperties;
+const btnDetail   = { padding: "6px 12px", background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 500 } as React.CSSProperties;
 const btnDeactivate = { padding: "6px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 500 } as React.CSSProperties;
-const thStyle      = { padding: "12px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 13 };
-const tdStyle      = { padding: "10px 16px" } as React.CSSProperties;
+const btnPage     = { padding: "8px 16px", background: "white", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer" } as React.CSSProperties;
+const thStyle      = { padding: "14px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 13, borderBottom: "1px solid #B5D4F4" };
+const tdStyle      = { padding: "12px 16px" } as React.CSSProperties;
 
 export default DocumentListPage;

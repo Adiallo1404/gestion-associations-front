@@ -97,7 +97,19 @@ export default function UserListPage() {
         onCancel={handleCancelDelete}
       />
 
-      <button style={styles.btnBack} onClick={() => navigate("/")}>← Tableau de bord</button>
+      {/* ✅ BREADCRUMB AJOUTÉ ICI */}
+      <nav style={breadcrumbStyle}>
+        <span
+          style={breadcrumbHome}
+          onClick={() => navigate("/")}
+        >
+          🏠 Accueil
+        </span>
+        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbCurrent}>
+          Utilisateurs
+        </span>
+      </nav>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <h1 style={{ ...styles.title, fontSize: isMobile ? 18 : 32 }}>👤 Utilisateurs</h1>
@@ -247,9 +259,37 @@ export default function UserListPage() {
   );
 }
 
+// --- STYLES BREADCRUMB ---
+const breadcrumbStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 16,
+  fontSize: 14,
+};
+
+const breadcrumbHome: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#6b7280",
+  cursor: "pointer",
+  fontWeight: 500,
+};
+
+const breadcrumbSeparator: React.CSSProperties = {
+  color: "#9ca3af",
+  fontSize: 16,
+};
+
+const breadcrumbCurrent: React.CSSProperties = {
+  color: "#111827",
+  fontWeight: 600,
+};
+
+// --- AUTRES STYLES ---
 const styles: Record<string, React.CSSProperties> = {
   page:          { background: "#f3f5f3b4", minHeight: "100vh", fontFamily: "system-ui, sans-serif" },
-  btnBack:       { display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 16, background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 14, padding: 0 },
   title:         { fontWeight: 500, color: "#1a1a1a", margin: 0 },
   btnCreate:     { background: "#116ecb", color: "#e6f1fbb9", border: "none", padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 },
   searchInput:   { padding: "9px 14px", borderRadius: 8, border: "0.5px solid #ccc", background: "#fff", fontSize: 14, color: "#1a1a1a", outline: "none" },
