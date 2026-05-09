@@ -1,12 +1,44 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { sendContactEmail } from "../api/emailEnvoyeService";
 
 export default function AboutPage() {
   const navigate = useNavigate();
 
+  const [form, setForm] = useState({ nom: "", email: "", message: "" });
+  const [loading, setLoading] = useState(false);
+  const [statut, setStatut] = useState<"idle" | "succes" | "erreur">("idle");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async () => {
+    if (!form.nom.trim() || !form.email.trim() || !form.message.trim()) {
+      alert("Veuillez remplir tous les champs.");
+      return;
+    }
+    setLoading(true);
+    setStatut("idle");
+    try {
+      await sendContactEmail({
+        nomExpediteur: form.nom,
+        destinataire:  form.email,
+        sujet:         `Message de ${form.nom}`,
+        contenu:       form.message,
+      });
+      setStatut("succes");
+      setForm({ nom: "", email: "", message: "" });
+    } catch {
+      setStatut("erreur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif", minHeight: "100vh", background: "#f8fafc" }}>
 
-      {/* NAVBAR */}
       <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", height: 64, background: "#fff", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 36, height: 36, background: "#1d4ed8", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 15 }}>G</div>
@@ -15,7 +47,7 @@ export default function AboutPage() {
         <div style={{ display: "flex", gap: 32 }}>
           <span onClick={() => navigate("/")} style={{ fontSize: 14, color: "#64748b", cursor: "pointer" }}>Accueil</span>
           <span style={{ fontSize: 14, color: "#1d4ed8", fontWeight: 600, borderBottom: "2px solid #1d4ed8", paddingBottom: 2, cursor: "pointer" }}>Qui sommes-nous</span>
-          <span onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })} style={{ fontSize: 14, color: "#64748b", cursor: "pointer" }}>Contact</span>
+          <span onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })} style={{ fontSize: 14, color: "#64748b", cursor: "pointer" }}>Contact</span>
         </div>
         <button onClick={() => navigate("/login")} style={{ background: "#1d4ed8", color: "#fff", border: "none", padding: "8px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
           Se connecter
@@ -24,7 +56,6 @@ export default function AboutPage() {
 
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 24px" }}>
 
-        {/* HERO */}
         <section style={{ display: "flex", alignItems: "flex-start", gap: 32, marginBottom: 48 }}>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 12, fontWeight: 600, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 8px" }}>À propos</p>
@@ -50,7 +81,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* VALEURS */}
         <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 48 }}>
           {[
             { icon: "🔐", title: "Sécurité",          desc: "Authentification sécurisée et gestion des accès par rôles pour chaque utilisateur." },
@@ -65,12 +95,10 @@ export default function AboutPage() {
           ))}
         </section>
 
-        {/* CONTACT */}
         <section id="contact" style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 32 }}>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "0 0 24px" }}>Contactez-nous</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
 
-            {/* COORDONNÉES */}
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
               {[
                 { icon: "✉️", label: "Email",     value: "alassanediallozig@gmail.com", color: "#1d4ed8" },
@@ -89,20 +117,54 @@ export default function AboutPage() {
               ))}
             </div>
 
-            {/* FORMULAIRE */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <input type="text"  placeholder="Votre nom"      style={inputStyle} />
-              <input type="email" placeholder="Votre email"    style={inputStyle} />
-              <textarea           placeholder="Votre message..." style={{ ...inputStyle, height: 100, resize: "none" as const }} />
-              <button style={{ background: "#1d4ed8", color: "#fff", border: "none", padding: "12px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                Envoyer le message
+              <input
+                type="text"
+                name="nom"
+                placeholder="Votre nom"
+                value={form.nom}
+                onChange={handleChange}
+                style={inputStyle}
+              />
+              <input
+                type="email"
+                name="email"
+                placeholder="Votre email"
+                value={form.email}
+                onChange={handleChange}
+                style={inputStyle}
+              />
+              <textarea
+                name="message"
+                placeholder="Votre message..."
+                value={form.message}
+                onChange={handleChange}
+                style={{ ...inputStyle, height: 100, resize: "none" as const }}
+              />
+
+              {statut === "succes" && (
+                <div style={{ fontSize: 13, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 14px" }}>
+                  ✅ Message envoyé avec succès !
+                </div>
+              )}
+              {statut === "erreur" && (
+                <div style={{ fontSize: 13, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px" }}>
+                  ❌ Une erreur est survenue. Veuillez réessayer.
+                </div>
+              )}
+
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                style={{ background: loading ? "#93c5fd" : "#1d4ed8", color: "#fff", border: "none", padding: "12px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", transition: "background 0.2s" }}
+              >
+                {loading ? "Envoi en cours..." : "Envoyer le message"}
               </button>
             </div>
           </div>
         </section>
       </div>
 
-      {/* FOOTER */}
       <footer style={{ textAlign: "center", padding: "24px", borderTop: "1px solid #e2e8f0", marginTop: 32 }}>
         <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>© 2026 GestAssoc — Tous droits réservés</p>
       </footer>

@@ -274,13 +274,13 @@ export default function DashboardPage() {
   }, [location.pathname]);
 
   return (
-    // ✅ FIX SCROLL : suppression de overflow:"hidden" sur le conteneur racine
     <div style={{
       display: "flex", width: "100%", minHeight: "100vh",
       fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
       background: "#f1f5f9", position: "relative",
     }}>
 
+      {/* ── TOPBAR MOBILE FIXE ── */}
       {isMobile && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, height: 52,
@@ -307,13 +307,12 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* ✅ FIX SCROLL sidebar : height:100vh + position:sticky pour desktop, fixed pour mobile */}
+      {/* ── SIDEBAR ── */}
       {(!isMobile || sidebarOpen) && (
         <aside style={{
           width: isMobile ? 260 : isTablet ? 220 : 255,
           background: "#0f172a", display: "flex", flexDirection: "column",
           flexShrink: 0, overflowY: "auto",
-          // Desktop/tablet : sticky pour rester visible au scroll
           height: isMobile ? "calc(100% - 52px)" : "100vh",
           position: isMobile ? "fixed" : "sticky",
           top: isMobile ? 52 : 0,
@@ -373,7 +372,7 @@ export default function DashboardPage() {
         </aside>
       )}
 
-      {/* ✅ FIX SCROLL main : overflow:auto + flex:1, plus de height:"100%" bloquant */}
+      {/* ── MAIN ── */}
       <main style={{
         flex: 1,
         minHeight: "100vh",
@@ -381,6 +380,7 @@ export default function DashboardPage() {
         padding: isMobile ? "68px 12px 16px" : isTablet ? "20px 20px" : "24px 32px",
       }}>
 
+        {/* TOPBAR DESKTOP */}
         {!isMobile && (
           <div style={s.topBar}>
             <div>
@@ -490,11 +490,88 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ✅ TOPBAR MOBILE : titre + notif + avatar/profil */}
         {isMobile && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Tableau de bord</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, textTransform: "capitalize" }}>
-              {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Tableau de bord</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, textTransform: "capitalize" }}>
+                {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* Bouton notifications */}
+              <div style={s.notifBtn} onClick={() => navigate('/notifications')}>
+                🔔
+                <div style={s.notifDot} />
+              </div>
+
+              {/* Avatar + menu profil */}
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{ ...s.avatarCircle, cursor: 'pointer' }}
+                  onClick={() => setProfileOpen(!profileOpen)}
+                >
+                  {userInitials}
+                </div>
+
+                {profileOpen && (
+                  <>
+                    <div
+                      style={{ position: 'fixed', inset: 0, zIndex: 98 }}
+                      onClick={() => setProfileOpen(false)}
+                    />
+                    <div style={{ ...s.profileMenu, right: 0, left: 'auto' }}>
+                      <div style={s.profileHeader}>
+                        <div style={{ ...s.avatarCircle, width: 44, height: 44, fontSize: 16, flexShrink: 0 }}>
+                          {userInitials}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>
+                            {user?.email?.split('@')[0]}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                            {user?.email}
+                          </div>
+                          {roleBadge && (
+                            <div style={{
+                              display: 'inline-block', marginTop: 5,
+                              background: roleBadge.bg, color: roleBadge.color,
+                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                            }}>
+                              {roleBadge.label}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={s.profileDivider} />
+
+                      <button style={s.profileItem}
+                        onClick={() => { setProfileOpen(false); navigate('/users/me'); }}>
+                        👤 Mon profil
+                      </button>
+                      <button style={s.profileItem}
+                        onClick={() => { setProfileOpen(false); navigate('/forgot-password'); }}>
+                        🔐 Changer mot de passe
+                      </button>
+                      <button style={s.profileItem}
+                        onClick={() => { setProfileOpen(false); navigate('/notifications'); }}>
+                        🔔 Mes notifications
+                      </button>
+
+                      <div style={s.profileDivider} />
+
+                      <button
+                        style={{ ...s.profileItem, color: '#dc2626' }}
+                        onClick={handleLogout}>
+                        ⏻ Déconnexion
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -5,7 +5,13 @@ import type { EmailEnvoyeDto } from "../types/emailEnvoye";
 
 const EmailEnvoyeFormPage = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState<EmailEnvoyeDto>({ destinataire: "", sujet: "", contenu: "", associationId: undefined });
+  const [form, setForm] = useState<EmailEnvoyeDto>({
+    nomExpediteur: "",
+    destinataire:  "",
+    sujet:         "",
+    contenu:       "",
+    associationId: undefined,
+  });
   const [errors, setErrors] = useState<Partial<Record<keyof EmailEnvoyeDto, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -18,6 +24,7 @@ const EmailEnvoyeFormPage = () => {
 
   const validate = () => {
     const newErrors: Partial<Record<keyof EmailEnvoyeDto, string>> = {};
+    if (!form.nomExpediteur?.trim()) newErrors.nomExpediteur = "Le nom de l'expéditeur est obligatoire.";
     if (!form.destinataire?.trim()) newErrors.destinataire = "Le destinataire est obligatoire.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.destinataire)) newErrors.destinataire = "Adresse email invalide.";
     if (!form.sujet?.trim()) newErrors.sujet = "Le sujet est obligatoire.";
@@ -55,7 +62,6 @@ const EmailEnvoyeFormPage = () => {
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "32px 16px" }}>
 
-      {/* HEADER — sans titre dupliqué, juste le bouton retour */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
         <button
           onClick={() => navigate("/emails-envoyes")}
@@ -72,8 +78,22 @@ const EmailEnvoyeFormPage = () => {
       )}
 
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 28 }}>
-
         <form onSubmit={handleSubmit}>
+
+          {/* NOM EXPÉDITEUR */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6, color: "#374151" }}>
+              Nom de l'expéditeur <span style={{ color: "#ef4444" }}>*</span>
+            </label>
+            <input
+              name="nomExpediteur"
+              value={form.nomExpediteur}
+              onChange={handleChange}
+              placeholder="Nom complet"
+              style={inputStyle(errors.nomExpediteur)}
+            />
+            {errors.nomExpediteur && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#ef4444" }}>{errors.nomExpediteur}</p>}
+          </div>
 
           {/* DESTINATAIRE */}
           <div style={{ marginBottom: 20 }}>

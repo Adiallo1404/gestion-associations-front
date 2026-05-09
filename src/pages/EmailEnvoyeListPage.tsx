@@ -52,11 +52,23 @@ const EmailEnvoyeListPage = () => {
     }
   };
 
-  const handleCancelDelete = () => setModal({ isOpen: false, id: null, label: "" });
+  const statutBadge = (statut?: string) => {
+    if (!statut) return <span style={{ color: "#94a3b8" }}>—</span>;
+    const isSucces = statut === "SUCCES";
+    return (
+      <span style={{
+        padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+        background: isSucces ? "#f0fdf4" : "#fef2f2",
+        color: isSucces ? "#16a34a" : "#dc2626",
+        border: `1px solid ${isSucces ? "#bbf7d0" : "#fecaca"}`
+      }}>
+        {isSucces ? "✅ Succès" : "❌ Échec"}
+      </span>
+    );
+  };
 
   return (
-    /* ✅ minHeight: "100vh" permet au fond de s'étendre et d'activer le scroll de App.tsx */
-    <div style={{ padding: isMobile ? "12px" : "12px 40px", background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ padding: isMobile ? "16px" : "24px 40px", background: "#f8fafc", minHeight: "100vh", fontFamily: "sans-serif" }}>
 
       <ConfirmModal
         isOpen={modal.isOpen}
@@ -65,51 +77,64 @@ const EmailEnvoyeListPage = () => {
         confirmLabel="Oui, supprimer"
         cancelLabel="Annuler"
         onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
+        onCancel={() => setModal({ isOpen: false, id: null, label: "" })}
       />
 
-      {/* ✅ BREADCRUMB SUPPRIMÉ ICI (Il est maintenant dans App.tsx) */}
+      {/* ✅ FIL D'ARIANE (BREADCRUMB) */}
+      <nav style={breadcrumbStyle}>
+        <span style={breadcrumbHome} onClick={() => navigate("/")}>
+          🏠 Accueil
+        </span>
+        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbCurrent}>Emails envoyés</span>
+      </nav>
 
-      {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, marginTop: 10 }}>
+      {/* ✅ EN-TÊTE DE PAGE */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 32, fontWeight: 700, color: "#0f172a" }}>
-            ✉️ Emails envoyés
-          </h2>
-          {!isMobile && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 14 }}>Suivi des communications envoyées</p>}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: isMobile ? 24 : 32 }}>✉️</span>
+            <h1 style={{ 
+              margin: 0, 
+              fontSize: isMobile ? 20 : 28, 
+              fontWeight: 800, 
+              color: "#0f172a",
+              letterSpacing: "-0.02em" 
+            }}>
+              Emails envoyés
+            </h1>
+          </div>
+          <p style={{ 
+            margin: "4px 0 0", 
+            fontSize: 14, 
+            color: "#64748b",
+            paddingLeft: isMobile ? 0 : 44 
+          }}>
+            Suivi des communications envoyées
+          </p>
         </div>
+
         <button onClick={() => navigate("/emails-envoyes/new")} style={btnAdd}>
           {isMobile ? "➕" : "+ Nouvel email"}
         </button>
       </div>
 
       {/* FILTRES */}
-      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: isMobile ? 12 : 20, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 20, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+          <input
+            style={inputStyle}
+            placeholder="Expéditeur"
+            value={filters.nomExpediteur || ""}
+            onChange={(e) => setFilters({ ...filters, nomExpediteur: e.target.value })}
+          />
           <input
             style={inputStyle}
             placeholder="Destinataire"
             value={filters.destinataire || ""}
             onChange={(e) => setFilters({ ...filters, destinataire: e.target.value })}
           />
-          <input
-            style={inputStyle}
-            placeholder="Sujet"
-            value={filters.sujet || ""}
-            onChange={(e) => setFilters({ ...filters, sujet: e.target.value })}
-          />
-          {!isMobile && (
-            <input
-              type="number"
-              style={{ ...inputStyle, width: 160 }}
-              placeholder="ID Association"
-              value={filters.associationId || ""}
-              onChange={(e) => setFilters({ ...filters, associationId: e.target.value ? Number(e.target.value) : undefined })}
-            />
-          )}
-          <button onClick={handleSearch} style={btnSearch}>
-            {isMobile ? "🔍" : "Rechercher"}
-          </button>
+          <button onClick={handleSearch} style={btnSearch}>🔍 Rechercher</button>
         </div>
       </div>
 
@@ -117,113 +142,92 @@ const EmailEnvoyeListPage = () => {
       {error && <div style={errorStyle}>{error}</div>}
       {loading && <div style={{ textAlign: "center", padding: 32, color: "#64748b" }}>Chargement...</div>}
 
-      {/* CONTENU */}
+      {/* TABLEAU / CONTENU */}
       {!loading && (
-        isMobile ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {(emails ?? []).length === 0 ? (
-              <p style={{ textAlign: "center", color: "#94a3b8" }}>Aucun email trouvé</p>
-            ) : (emails ?? []).map((email) => (
-              <div key={email.id} style={mobileCardStyle}>
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, color: "#1e293b" }}>{email.sujet}</div>
-                <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>
-                  📧 {email.destinataire}
-                </div>
-                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10 }}>
-                  #{email.id} · {email.dateEnvoi ? new Date(email.dateEnvoi).toLocaleString("fr-FR") : "—"}
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => navigate(`/emails-envoyes/${email.id}`)} style={{ ...btnDetail, flex: 1 }}>👁️ Détail</button>
-                  <button onClick={() => handleDeleteClick(email.id!, email.sujet)} style={{ ...btnDelete, flex: 1 }}>🗑️ Supprimer</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={tableContainerStyle}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-              <thead>
-                <tr style={{ background: "#E6F1FB", color: "#0C447C" }}>
-                  {!isTablet && <th style={thStyle}>#</th>}
-                  <th style={thStyle}>Destinataire</th>
-                  <th style={thStyle}>Sujet</th>
-                  {!isTablet && <th style={thStyle}>Association</th>}
-                  <th style={thStyle}>Date d'envoi</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(emails ?? []).length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Aucun email trouvé</td>
+        <div style={tableContainerStyle}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                <th style={thStyle}>Destinataire</th>
+                <th style={thStyle}>Sujet</th>
+                {!isMobile && <th style={thStyle}>Statut</th>}
+                {!isMobile && <th style={thStyle}>Date</th>}
+                <th style={thStyle}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {emails.length === 0 ? (
+                <tr><td colSpan={5} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Aucun email trouvé</td></tr>
+              ) : (
+                emails.map((email) => (
+                  <tr key={email.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={tdStyle}>{email.destinataire}</td>
+                    <td style={{ ...tdStyle, fontWeight: 500 }}>{email.sujet}</td>
+                    {!isMobile && <td style={tdStyle}>{statutBadge(email.statutEnvoi)}</td>}
+                    {!isMobile && <td style={tdStyle}>{email.dateEnvoi ? new Date(email.dateEnvoi).toLocaleDateString() : "—"}</td>}
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => navigate(`/emails-envoyes/${email.id}`)} style={btnDetail}>👁️</button>
+                        <button onClick={() => handleDeleteClick(email.id!, email.sujet)} style={btnDelete}>🗑️</button>
+                      </div>
+                    </td>
                   </tr>
-                ) : (
-                  /* ✅ CORRECTION ICI : Retrait du 'i' inutilisé pour corriger l'erreur TS6133 */
-                  (emails ?? []).map((email) => (
-                    <tr key={email.id} style={{ borderBottom: "1px solid #f1f5f9", background: "white" }}>
-                      {!isTablet && <td style={{ ...tdStyle, color: "#94a3b8", fontWeight: 600 }}>#{email.id}</td>}
-                      <td style={tdStyle}>{email.destinataire}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500, color: "#1e293b" }}>{email.sujet}</td>
-                      {!isTablet && <td style={{ ...tdStyle, color: "#64748b" }}>{email.associationId ?? "—"}</td>}
-                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 13 }}>
-                        {email.dateEnvoi ? new Date(email.dateEnvoi).toLocaleString("fr-FR") : "—"}
-                      </td>
-                      <td style={tdStyle}>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button onClick={() => navigate(`/emails-envoyes/${email.id}`)} style={btnDetail}>
-                            {isTablet ? "👁️" : "👁️ Détail"}
-                          </button>
-                          <button onClick={() => handleDeleteClick(email.id!, email.sujet)} style={btnDelete}>
-                            {isTablet ? "🗑️" : "🗑️ Supprimer"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* PAGINATION */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24, paddingBottom: 20 }}>
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page === 0}
-            style={{ ...btnPage, opacity: page === 0 ? 0.5 : 1 }}
-          >
-            ←
-          </button>
-          <span style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
-            Page {page + 1} sur {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(page + 1)}
-            disabled={page === totalPages - 1}
-            style={{ ...btnPage, opacity: page === totalPages - 1 ? 0.5 : 1 }}
-          >
-            →
-          </button>
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 24 }}>
+          <button onClick={() => setPage(page - 1)} disabled={page === 0} style={btnPage}>←</button>
+          <span style={{ alignSelf: "center", fontWeight: 600 }}>{page + 1} / {totalPages}</span>
+          <button onClick={() => setPage(page + 1)} disabled={page === totalPages - 1} style={btnPage}>→</button>
         </div>
       )}
     </div>
   );
 };
 
-// ── Styles ──────────────────────────────────────────────────────────────
-const inputStyle = { flex: 1, minWidth: 140, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 } as React.CSSProperties;
-const btnAdd     = { padding: "10px 16px", background: "#2563eb", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 } as React.CSSProperties;
-const btnSearch  = { padding: "8px 20px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500 } as React.CSSProperties;
-const btnDetail  = { padding: "6px 12px", background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 4 } as React.CSSProperties;
-const btnDelete  = { padding: "6px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 500 } as React.CSSProperties;
-const btnPage    = { padding: "8px 16px", background: "white", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer" } as React.CSSProperties;
-const thStyle    = { padding: "14px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 13, borderBottom: "1px solid #B5D4F4" };
-const tdStyle    = { padding: "12px 16px" } as React.CSSProperties;
-const errorStyle = { background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px", marginBottom: 16 } as React.CSSProperties;
-const mobileCardStyle = { background: "#fff", borderRadius: 12, padding: 14, border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" } as React.CSSProperties;
-const tableContainerStyle = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" } as React.CSSProperties;
+// --- STYLES ---
+const breadcrumbStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 20,
+  fontSize: 14,
+};
+
+const breadcrumbHome: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#64748b",
+  cursor: "pointer",
+  fontWeight: 500,
+};
+
+const breadcrumbSeparator: React.CSSProperties = {
+  color: "#cbd5e1",
+  fontSize: 16,
+};
+
+const breadcrumbCurrent: React.CSSProperties = {
+  color: "#0f172a",
+  fontWeight: 600,
+};
+
+const inputStyle = { flex: 1, minWidth: 140, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8 };
+const btnAdd = { padding: "10px 20px", background: "#2563eb", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 };
+const btnSearch = { padding: "8px 20px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer" };
+const btnDetail = { padding: "6px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 6, cursor: "pointer" };
+const btnDelete = { padding: "6px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer" };
+const btnPage = { padding: "8px 16px", background: "white", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer" };
+const thStyle = { padding: "12px 16px", textAlign: "left" as const, color: "#64748b", fontSize: 13, fontWeight: 600 };
+const tdStyle = { padding: "12px 16px" };
+const errorStyle = { background: "#fef2f2", color: "#dc2626", padding: 12, borderRadius: 8, marginBottom: 16 };
+const tableContainerStyle = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" };
 
 export default EmailEnvoyeListPage;

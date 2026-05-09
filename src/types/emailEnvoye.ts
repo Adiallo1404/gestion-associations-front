@@ -1,25 +1,28 @@
 export interface EmailEnvoyeDto {
-  id?: number;
-  destinataire: string;
-  sujet: string;
-  contenu?: string;
-  associationId?: number;
-  dateEnvoi?: string;
-
+  id?:             number;
+  nomExpediteur?:  string;
+  destinataire:    string;
+  sujet:           string;
+  contenu?:        string;
+  associationId?:  number;
+  dateEnvoi?:      string;
+  statutEnvoi?:    string;
 }
 
 export interface EmailEnvoyePageResponse {
-  content: EmailEnvoyeDto[];
+  content:       EmailEnvoyeDto[];
   totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-  first: boolean;
-  last: boolean;
+  totalPages:    number;
+  size:          number;
+  number:        number;
+  first:         boolean;
+  last:          boolean;
 }
 
 export interface EmailEnvoyeFilter {
-  destinataire?: string;
-  sujet?: string;
+  nomExpediteur?: string;
+  destinataire?:  string;
+  sujet?:         string;
+  statutEnvoi?:   string;
   associationId?: number;
 }
