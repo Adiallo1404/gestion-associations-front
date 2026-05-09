@@ -55,7 +55,8 @@ const EmailEnvoyeListPage = () => {
   const handleCancelDelete = () => setModal({ isOpen: false, id: null, label: "" });
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "32px 40px", background: "#f8fafc", minHeight: "100vh" }}>
+    /* ✅ minHeight: "100vh" permet au fond de s'étendre et d'activer le scroll de App.tsx */
+    <div style={{ padding: isMobile ? "12px" : "12px 40px", background: "#f8fafc", minHeight: "100vh" }}>
 
       <ConfirmModal
         isOpen={modal.isOpen}
@@ -67,17 +68,10 @@ const EmailEnvoyeListPage = () => {
         onCancel={handleCancelDelete}
       />
 
-      {/* ✅ FIL D'ARIANE (BREADCRUMB) */}
-      <nav style={breadcrumbStyle}>
-        <span style={breadcrumbHome} onClick={() => navigate("/")}>
-          🏠 Accueil
-        </span>
-        <span style={breadcrumbSeparator}>›</span>
-        <span style={breadcrumbCurrent}>Emails envoyés</span>
-      </nav>
+      {/* ✅ BREADCRUMB SUPPRIMÉ ICI (Il est maintenant dans App.tsx) */}
 
       {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, marginTop: 10 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 32, fontWeight: 700, color: "#0f172a" }}>
             ✉️ Emails envoyés
@@ -119,13 +113,8 @@ const EmailEnvoyeListPage = () => {
         </div>
       </div>
 
-      {/* ERREUR */}
-      {error && (
-        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
-          {error}
-        </div>
-      )}
-
+      {/* ERREUR / CHARGEMENT */}
+      {error && <div style={errorStyle}>{error}</div>}
       {loading && <div style={{ textAlign: "center", padding: 32, color: "#64748b" }}>Chargement...</div>}
 
       {/* CONTENU */}
@@ -135,7 +124,7 @@ const EmailEnvoyeListPage = () => {
             {(emails ?? []).length === 0 ? (
               <p style={{ textAlign: "center", color: "#94a3b8" }}>Aucun email trouvé</p>
             ) : (emails ?? []).map((email) => (
-              <div key={email.id} style={{ background: "#fff", borderRadius: 12, padding: 14, border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+              <div key={email.id} style={mobileCardStyle}>
                 <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, color: "#1e293b" }}>{email.sujet}</div>
                 <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>
                   📧 {email.destinataire}
@@ -151,7 +140,7 @@ const EmailEnvoyeListPage = () => {
             ))}
           </div>
         ) : (
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+          <div style={tableContainerStyle}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: "#E6F1FB", color: "#0C447C" }}>
@@ -169,7 +158,8 @@ const EmailEnvoyeListPage = () => {
                     <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Aucun email trouvé</td>
                   </tr>
                 ) : (
-                  (emails ?? []).map((email, i) => (
+                  /* ✅ CORRECTION ICI : Retrait du 'i' inutilisé pour corriger l'erreur TS6133 */
+                  (emails ?? []).map((email) => (
                     <tr key={email.id} style={{ borderBottom: "1px solid #f1f5f9", background: "white" }}>
                       {!isTablet && <td style={{ ...tdStyle, color: "#94a3b8", fontWeight: 600 }}>#{email.id}</td>}
                       <td style={tdStyle}>{email.destinataire}</td>
@@ -199,7 +189,7 @@ const EmailEnvoyeListPage = () => {
 
       {/* PAGINATION */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24, paddingBottom: 20 }}>
           <button
             onClick={() => setPage(page - 1)}
             disabled={page === 0}
@@ -223,35 +213,7 @@ const EmailEnvoyeListPage = () => {
   );
 };
 
-// ── Styles Breadcrumb ──────────────────────────────────────────────────────────
-const breadcrumbStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  marginBottom: 20,
-  fontSize: 14,
-};
-
-const breadcrumbHome: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  color: "#64748b",
-  cursor: "pointer",
-  fontWeight: 500,
-};
-
-const breadcrumbSeparator: React.CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 16,
-};
-
-const breadcrumbCurrent: React.CSSProperties = {
-  color: "#0f172a",
-  fontWeight: 600,
-};
-
-// ── Autres Styles ──────────────────────────────────────────────────────────────
+// ── Styles ──────────────────────────────────────────────────────────────
 const inputStyle = { flex: 1, minWidth: 140, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 } as React.CSSProperties;
 const btnAdd     = { padding: "10px 16px", background: "#2563eb", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 } as React.CSSProperties;
 const btnSearch  = { padding: "8px 20px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500 } as React.CSSProperties;
@@ -260,5 +222,8 @@ const btnDelete  = { padding: "6px 12px", background: "#fef2f2", color: "#ef4444
 const btnPage    = { padding: "8px 16px", background: "white", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer" } as React.CSSProperties;
 const thStyle    = { padding: "14px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 13, borderBottom: "1px solid #B5D4F4" };
 const tdStyle    = { padding: "12px 16px" } as React.CSSProperties;
+const errorStyle = { background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px", marginBottom: 16 } as React.CSSProperties;
+const mobileCardStyle = { background: "#fff", borderRadius: 12, padding: 14, border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" } as React.CSSProperties;
+const tableContainerStyle = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" } as React.CSSProperties;
 
 export default EmailEnvoyeListPage;

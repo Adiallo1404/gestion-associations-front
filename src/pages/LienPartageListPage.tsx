@@ -67,19 +67,12 @@ const LienPartageListPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "32px 40px", background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ padding: isMobile ? "12px" : "12px 40px", background: "#f8fafc", minHeight: "100vh" }}>
       
-      {/* ✅ FIL D'ARIANE (BREADCRUMB) */}
-      <nav style={breadcrumbStyle}>
-        <span style={breadcrumbHome} onClick={() => navigate("/")}>
-          🏠 Accueil
-        </span>
-        <span style={breadcrumbSeparator}>›</span>
-        <span style={breadcrumbCurrent}>Liens de partage</span>
-      </nav>
+      {/* ✅ BREADCRUMB SUPPRIMÉ (Géré par App.tsx) */}
 
       {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, marginTop: 10 }}>
         <div>
           <h2 style={{ fontSize: isMobile ? 18 : 32, fontWeight: 700, margin: 0, color: "#0f172a" }}>
             🔗 Liens de partage
@@ -92,15 +85,7 @@ const LienPartageListPage: React.FC = () => {
       </div>
 
       {/* FILTRES */}
-      <div style={{
-        background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
-        padding: isMobile ? 12 : "20px",
-        marginBottom: 24,
-        display: "flex", gap: 12,
-        flexDirection: isMobile ? "column" : "row",
-        flexWrap: "wrap", alignItems: "flex-end",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
-      }}>
+      <div style={filterContainer(isMobile)}>
         {!isMobile && (
           <div style={filterGroup}>
             <span style={label}>Document ID</span>
@@ -139,11 +124,7 @@ const LienPartageListPage: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <div style={{ border: "1px solid #fca5a5", background: "#fef2f2", color: "#dc2626", borderRadius: 8, padding: "12px 16px", fontSize: 14, marginBottom: 16 }}>
-          {error}
-        </div>
-      )}
+      {error && <div style={errorBanner}>{error}</div>}
 
       {/* CONTENU */}
       {loading ? (
@@ -153,9 +134,9 @@ const LienPartageListPage: React.FC = () => {
           {liens.length === 0 ? (
             <p style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucun lien trouvé.</p>
           ) : liens.map((lien) => (
-            <div key={lien.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+            <div key={lien.id} style={mobileCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <code style={{ fontSize: 12, color: "#475569", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>
+                <code style={tokenBadge}>
                   {lien.token && lien.token.length > 20 ? lien.token.substring(0, 20) + "…" : lien.token}
                 </code>
                 <span style={lien.actif ? badgeSuccess : badgeSecondary}>
@@ -176,7 +157,7 @@ const LienPartageListPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <div style={tableWrapper}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead style={{ background: "#F1F5F9" }}>
               <tr>
@@ -199,7 +180,7 @@ const LienPartageListPage: React.FC = () => {
                   <tr key={lien.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                     {!isTablet && <td style={tdMuted}>#{lien.id}</td>}
                     <td style={td}>
-                      <code style={{ fontSize: 13, background: "#f8fafc", padding: "2px 4px", borderRadius: 4, color: "#334155" }}>
+                      <code style={tokenBadgeTable}>
                         {lien.token && lien.token.length > 24 ? lien.token.substring(0, 24) + "…" : lien.token}
                       </code>
                     </td>
@@ -235,25 +216,26 @@ const LienPartageListPage: React.FC = () => {
 
       {/* PAGINATION */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 24 }}>
-          <button style={pageBtn(false)} disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 24, paddingBottom: 20 }}>
+          <button style={pageBtnStyle} disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
           <span style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
             Page {page + 1}
           </span>
-          <button style={pageBtn(false)} disabled={page === totalPages - 1} onClick={() => setPage(page + 1)}>›</button>
+          <button style={pageBtnStyle} disabled={page === totalPages - 1} onClick={() => setPage(page + 1)}>›</button>
         </div>
       )}
     </div>
   );
 };
 
-// ── Styles Breadcrumb ──────────────────────────────────────────────────────────
-const breadcrumbStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 14 };
-const breadcrumbHome: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, color: "#64748b", cursor: "pointer", fontWeight: 500 };
-const breadcrumbSeparator: React.CSSProperties = { color: "#94a3b8", fontSize: 16 };
-const breadcrumbCurrent: React.CSSProperties = { color: "#0f172a", fontWeight: 600 };
-
 // ── Styles ────────────────────────────────────────────────────────────────────
+const filterContainer = (isMobile: boolean): React.CSSProperties => ({
+  background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
+  padding: isMobile ? 12 : "20px", marginBottom: 24,
+  display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row",
+  flexWrap: "wrap", alignItems: "flex-end", boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+});
+
 const btnPrimary = { background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 14, cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
 const btnSearch  = { background: "#0f172a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
 const btnOutline = { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer" } as React.CSSProperties;
@@ -268,8 +250,21 @@ const td         = { padding: "14px 16px", color: "#1e293b", verticalAlign: "mid
 const tdMuted    = { padding: "14px 16px", color: "#64748b", verticalAlign: "middle" as const } as React.CSSProperties;
 const badgeSuccess   = { background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 } as React.CSSProperties;
 const badgeSecondary = { background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 } as React.CSSProperties;
-const pageBtn = (active: boolean): React.CSSProperties => ({
-  border: "1px solid #cbd5e1", background: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 14, cursor: "pointer", fontWeight: 600
-});
+const tokenBadge = { fontSize: 12, color: "#475569", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 };
+const tokenBadgeTable = { fontSize: 13, background: "#f8fafc", padding: "2px 4px", borderRadius: 4, color: "#334155" };
+const mobileCard = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" };
+const tableWrapper = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" };
+const errorBanner = { border: "1px solid #fca5a5", background: "#fef2f2", color: "#dc2626", borderRadius: 8, padding: "12px 16px", fontSize: 14, marginBottom: 16 };
+
+// ✅ Suppression du paramètre inutilisé 'active' pour corriger TS6133
+const pageBtnStyle: React.CSSProperties = {
+  border: "1px solid #cbd5e1", 
+  background: "#fff", 
+  borderRadius: 8, 
+  padding: "8px 16px", 
+  fontSize: 14, 
+  cursor: "pointer", 
+  fontWeight: 600
+};
 
 export default LienPartageListPage;
