@@ -7,7 +7,9 @@ import { useWindowSize } from "../hooks/useWindowSize";
 
 const EmailEnvoyeListPage = () => {
   const navigate = useNavigate();
-  const { isMobile, isTablet } = useWindowSize();
+  // ✅ Correction : On retire 'isTablet' s'il n'est pas utilisé pour éviter l'erreur TS6133
+  const { isMobile } = useWindowSize(); 
+  
   const [emails, setEmails] = useState<EmailEnvoyeDto[]>([]);
   const [filters, setFilters] = useState<EmailEnvoyeFilter>({});
   const [page, setPage] = useState(0);
@@ -80,16 +82,18 @@ const EmailEnvoyeListPage = () => {
         onCancel={() => setModal({ isOpen: false, id: null, label: "" })}
       />
 
-      {/* ✅ FIL D'ARIANE (BREADCRUMB) */}
+      {/* ✅ FIL D'ARIANE (STYLE MISE À JOUR SELON IMAGE) */}
       <nav style={breadcrumbStyle}>
         <span style={breadcrumbHome} onClick={() => navigate("/")}>
           🏠 Accueil
         </span>
         <span style={breadcrumbSeparator}>›</span>
-        <span style={breadcrumbCurrent}>Emails envoyés</span>
+        <span style={breadcrumbCurrentBadge}>
+          Emails envoyés
+        </span>
       </nav>
 
-      {/* ✅ EN-TÊTE DE PAGE */}
+      {/* EN-TÊTE DE PAGE */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -142,7 +146,7 @@ const EmailEnvoyeListPage = () => {
       {error && <div style={errorStyle}>{error}</div>}
       {loading && <div style={{ textAlign: "center", padding: 32, color: "#64748b" }}>Chargement...</div>}
 
-      {/* TABLEAU / CONTENU */}
+      {/* TABLEAU */}
       {!loading && (
         <div style={tableContainerStyle}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
@@ -191,11 +195,11 @@ const EmailEnvoyeListPage = () => {
   );
 };
 
-// --- STYLES ---
+// --- STYLES MIS À JOUR ---
 const breadcrumbStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: 10,
   marginBottom: 20,
   fontSize: 14,
 };
@@ -211,11 +215,15 @@ const breadcrumbHome: React.CSSProperties = {
 
 const breadcrumbSeparator: React.CSSProperties = {
   color: "#cbd5e1",
-  fontSize: 16,
+  fontSize: 14,
 };
 
-const breadcrumbCurrent: React.CSSProperties = {
-  color: "#0f172a",
+const breadcrumbCurrentBadge: React.CSSProperties = {
+  background: "#eff6ff", // Bleu très clair comme sur l'image
+  color: "#1e293b",
+  padding: "4px 12px",
+  borderRadius: "8px",
+  border: "1px solid #dbeafe",
   fontWeight: 600,
 };
 
