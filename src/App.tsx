@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect } from "react";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import Breadcrumb from './components/Breadcrumb'; // ✅ Ton composant
 import type { GlobalRole } from './hooks/useRole';
 
 // Import des pages
@@ -83,10 +82,6 @@ function App() {
           flexDirection: "column"
         }}>
           
-          {/* ✅ Zone du Breadcrumb (Padding horizontal aligné sur tes pages) */}
-          <div style={{ padding: "0 40px" }}>
-            <Breadcrumb />
-          </div>
 
           {/* ✅ Zone de contenu principal qui gère son propre défilement naturellement */}
           <main style={{ flex: 1 }}>

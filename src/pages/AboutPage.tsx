@@ -15,7 +15,7 @@ export default function AboutPage() {
         <div style={{ display: "flex", gap: 32 }}>
           <span onClick={() => navigate("/")} style={{ fontSize: 14, color: "#64748b", cursor: "pointer" }}>Accueil</span>
           <span style={{ fontSize: 14, color: "#1d4ed8", fontWeight: 600, borderBottom: "2px solid #1d4ed8", paddingBottom: 2, cursor: "pointer" }}>Qui sommes-nous</span>
-          <span onClick={() => navigate("/contact")} style={{ fontSize: 14, color: "#64748b", cursor: "pointer" }}>Contact</span>
+          <span onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })} style={{ fontSize: 14, color: "#64748b", cursor: "pointer" }}>Contact</span>
         </div>
         <button onClick={() => navigate("/login")} style={{ background: "#1d4ed8", color: "#fff", border: "none", padding: "8px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
           Se connecter
@@ -53,9 +53,9 @@ export default function AboutPage() {
         {/* VALEURS */}
         <section style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 48 }}>
           {[
-            { icon: "🔐", title: "Sécurité",         desc: "Authentification sécurisée et gestion des accès par rôles pour chaque utilisateur." },
+            { icon: "🔐", title: "Sécurité",          desc: "Authentification sécurisée et gestion des accès par rôles pour chaque utilisateur." },
             { icon: "🏛️", title: "Multi-associations", desc: "Gérez plusieurs associations depuis un seul tableau de bord." },
-            { icon: "📱", title: "Responsive",        desc: "Interface optimisée sur mobile, tablette et desktop." },
+            { icon: "📱", title: "Responsive",         desc: "Interface optimisée sur mobile, tablette et desktop." },
           ].map(({ icon, title, desc }) => (
             <div key={title} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 20 }}>
               <div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div>
@@ -66,7 +66,7 @@ export default function AboutPage() {
         </section>
 
         {/* CONTACT */}
-        <section style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 32 }}>
+        <section id="contact" style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 32 }}>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "0 0 24px" }}>Contactez-nous</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
 
@@ -75,7 +75,7 @@ export default function AboutPage() {
               {[
                 { icon: "✉️", label: "Email",     value: "alassanediallozig@gmail.com", color: "#1d4ed8" },
                 { icon: "📞", label: "Téléphone", value: "+33 6 10 40 66 85",           color: "#0f172a" },
-                { icon: "📍", label: "Adresse",   value: "Paris, France",                color: "#0f172a" },
+                { icon: "📍", label: "Adresse",   value: "Paris, France",               color: "#0f172a" },
               ].map(({ icon, label, value, color }, i, arr) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 0", borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none" }}>
                   <div style={{ width: 40, height: 40, background: "#eff6ff", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
@@ -91,8 +91,8 @@ export default function AboutPage() {
 
             {/* FORMULAIRE */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <input type="text"  placeholder="Votre nom"     style={inputStyle} />
-              <input type="email" placeholder="Votre email"   style={inputStyle} />
+              <input type="text"  placeholder="Votre nom"      style={inputStyle} />
+              <input type="email" placeholder="Votre email"    style={inputStyle} />
               <textarea           placeholder="Votre message..." style={{ ...inputStyle, height: 100, resize: "none" as const }} />
               <button style={{ background: "#1d4ed8", color: "#fff", border: "none", padding: "12px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                 Envoyer le message
