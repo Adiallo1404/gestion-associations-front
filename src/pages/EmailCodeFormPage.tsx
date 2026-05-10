@@ -79,10 +79,22 @@ export default function EmailCodeFormPage() {
     <div style={styles.page}>
       <div style={styles.card}>
 
-        {/* ✅ Bouton retour tableau de bord */}
-        <button style={styles.btnBack} onClick={() => navigate("/")}>
-          ← Tableau de bord
-        </button>
+        {/* BREADCRUMB */}
+        <nav style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 14 }}>
+          <span
+            onClick={() => navigate("/")}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              color: "#64748b", cursor: "pointer", fontWeight: 500,
+              background: "#f1f5f9", padding: "4px 10px",
+              borderRadius: 6, border: "1px solid #e2e8f0",
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🏠</span> Accueil
+          </span>
+          <span style={{ color: "#94a3b8", fontSize: 16 }}>›</span>
+          <span style={{ color: "#0f172a", fontWeight: 600 }}>🔑 Code Email</span>
+        </nav>
 
         <h2 style={styles.title}>🔐 Vérifier le code</h2>
 
@@ -138,7 +150,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "90vh",
+    minHeight: "100vh",
     background: "#F5F5F3",
   },
   card: {
@@ -147,19 +159,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "12px",
     boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
     width: "380px",
-  },
-  // ✅ Nouveau style bouton retour
-  btnBack: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 16,
-    background: "none",
-    border: "none",
-    color: "#6b7280",
-    cursor: "pointer",
-    fontSize: 14,
-    padding: 0,
   },
   title: {
     textAlign: "center",

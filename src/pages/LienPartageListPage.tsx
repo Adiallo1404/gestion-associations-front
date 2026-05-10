@@ -35,9 +35,7 @@ const LienPartageListPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchLiens();
-  }, [filters, page]);
+  useEffect(() => { fetchLiens(); }, [filters, page]);
 
   const handleSearch = () => {
     const newFilters: LienPartageFilters = {};
@@ -68,8 +66,15 @@ const LienPartageListPage: React.FC = () => {
 
   return (
     <div style={{ padding: isMobile ? "12px" : "12px 40px", background: "#f8fafc", minHeight: "100vh" }}>
-      
-      {/* ✅ BREADCRUMB SUPPRIMÉ (Géré par App.tsx) */}
+
+      {/* BREADCRUMB */}
+      <nav style={breadcrumbStyle}>
+        <span style={breadcrumbHome} onClick={() => navigate("/")}>
+          <span style={{ fontSize: 16 }}>🏠</span> Accueil
+        </span>
+        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbCurrent}>🔗 Liens de partage</span>
+      </nav>
 
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, marginTop: 10 }}>
@@ -88,7 +93,7 @@ const LienPartageListPage: React.FC = () => {
       <div style={filterContainer(isMobile)}>
         {!isMobile && (
           <div style={filterGroup}>
-            <span style={label}>Document ID</span>
+            <span style={labelStyle}>Document ID</span>
             <input
               style={inputStyle} type="number" placeholder="Ex : 1"
               value={filterDocumentId}
@@ -98,7 +103,7 @@ const LienPartageListPage: React.FC = () => {
         )}
         {!isMobile && (
           <div style={filterGroup}>
-            <span style={label}>Créé par (User ID)</span>
+            <span style={labelStyle}>Créé par (User ID)</span>
             <input
               style={inputStyle} type="number" placeholder="Ex : 3"
               value={filterCreeParId}
@@ -107,7 +112,7 @@ const LienPartageListPage: React.FC = () => {
           </div>
         )}
         <div style={filterGroup}>
-          <span style={label}>Statut</span>
+          <span style={labelStyle}>Statut</span>
           <select style={selectStyle} value={filterActif} onChange={(e) => setFilterActif(e.target.value)}>
             <option value="">Tous les statuts</option>
             <option value="true">Actif</option>
@@ -175,40 +180,38 @@ const LienPartageListPage: React.FC = () => {
                 <tr>
                   <td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>Aucun lien trouvé.</td>
                 </tr>
-              ) : (
-                liens.map((lien) => (
-                  <tr key={lien.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    {!isTablet && <td style={tdMuted}>#{lien.id}</td>}
-                    <td style={td}>
-                      <code style={tokenBadgeTable}>
-                        {lien.token && lien.token.length > 24 ? lien.token.substring(0, 24) + "…" : lien.token}
-                      </code>
+              ) : liens.map((lien) => (
+                <tr key={lien.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  {!isTablet && <td style={tdMuted}>#{lien.id}</td>}
+                  <td style={td}>
+                    <code style={tokenBadgeTable}>
+                      {lien.token && lien.token.length > 24 ? lien.token.substring(0, 24) + "…" : lien.token}
+                    </code>
+                  </td>
+                  {!isTablet && (
+                    <td style={tdMuted}>
+                      {lien.dateExpiration ? new Date(lien.dateExpiration).toLocaleString("fr-FR") : "∞"}
                     </td>
-                    {!isTablet && (
-                      <td style={tdMuted}>
-                        {lien.dateExpiration ? new Date(lien.dateExpiration).toLocaleString("fr-FR") : "∞"}
-                      </td>
-                    )}
-                    <td style={td}>{lien.nombreAccesActuel ?? 0} / {lien.nombreAccesMax ?? "∞"}</td>
-                    <td style={td}>
-                      <span style={lien.actif ? badgeSuccess : badgeSecondary}>
-                        {lien.actif ? "Actif" : "Inactif"}
-                      </span>
-                    </td>
-                    {!isTablet && <td style={tdMuted}>#{lien.documentId}</td>}
-                    <td style={td}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button style={btnInfo} onClick={() => navigate(`/liens-partage/${lien.id}`)}>
-                          {isTablet ? "👁️" : "Détail"}
-                        </button>
-                        <button style={btnDanger} onClick={() => handleDelete(lien.id!)}>
-                          {isTablet ? "🗑️" : "Supprimer"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+                  )}
+                  <td style={td}>{lien.nombreAccesActuel ?? 0} / {lien.nombreAccesMax ?? "∞"}</td>
+                  <td style={td}>
+                    <span style={lien.actif ? badgeSuccess : badgeSecondary}>
+                      {lien.actif ? "Actif" : "Inactif"}
+                    </span>
+                  </td>
+                  {!isTablet && <td style={tdMuted}>#{lien.documentId}</td>}
+                  <td style={td}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button style={btnInfo} onClick={() => navigate(`/liens-partage/${lien.id}`)}>
+                        {isTablet ? "👁️" : "Détail"}
+                      </button>
+                      <button style={btnDanger} onClick={() => handleDelete(lien.id!)}>
+                        {isTablet ? "🗑️" : "Supprimer"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -228,7 +231,39 @@ const LienPartageListPage: React.FC = () => {
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Styles Breadcrumb ─────────────────────────────────────────────────────────
+const breadcrumbStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 20,
+  fontSize: 14,
+};
+
+const breadcrumbHome: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#64748b",
+  cursor: "pointer",
+  fontWeight: 500,
+  background: "#f1f5f9",
+  padding: "4px 10px",
+  borderRadius: 6,
+  border: "1px solid #e2e8f0",
+};
+
+const breadcrumbSeparator: React.CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 16,
+};
+
+const breadcrumbCurrent: React.CSSProperties = {
+  color: "#0f172a",
+  fontWeight: 600,
+};
+
+// ── Autres Styles ─────────────────────────────────────────────────────────────
 const filterContainer = (isMobile: boolean): React.CSSProperties => ({
   background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
   padding: isMobile ? 12 : "20px", marginBottom: 24,
@@ -236,35 +271,25 @@ const filterContainer = (isMobile: boolean): React.CSSProperties => ({
   flexWrap: "wrap", alignItems: "flex-end", boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
 });
 
-const btnPrimary = { background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 14, cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
-const btnSearch  = { background: "#0f172a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
-const btnOutline = { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer" } as React.CSSProperties;
-const btnInfo    = { background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
-const btnDanger  = { background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
-const filterGroup = { display: "flex", flexDirection: "column" as const, gap: 4, flex: 1, minWidth: 160 };
-const label      = { fontSize: 12, color: "#64748b", fontWeight: 600, textTransform: "uppercase" as const } as React.CSSProperties;
-const inputStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, background: "#fff", outline: "none" } as React.CSSProperties;
-const selectStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, background: "#fff", outline: "none", cursor: "pointer" } as React.CSSProperties;
-const th         = { padding: "12px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 12, color: "#475569", textTransform: "uppercase" as const, letterSpacing: "0.05em" };
-const td         = { padding: "14px 16px", color: "#1e293b", verticalAlign: "middle" as const } as React.CSSProperties;
-const tdMuted    = { padding: "14px 16px", color: "#64748b", verticalAlign: "middle" as const } as React.CSSProperties;
-const badgeSuccess   = { background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 } as React.CSSProperties;
+const btnPrimary    = { background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 14, cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
+const btnSearch     = { background: "#0f172a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
+const btnOutline    = { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer" } as React.CSSProperties;
+const btnInfo       = { background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
+const btnDanger     = { background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, padding: "6px 12px", fontSize: 13, cursor: "pointer", fontWeight: 500 } as React.CSSProperties;
+const filterGroup   = { display: "flex", flexDirection: "column" as const, gap: 4, flex: 1, minWidth: 160 };
+const labelStyle    = { fontSize: 12, color: "#64748b", fontWeight: 600, textTransform: "uppercase" as const } as React.CSSProperties;
+const inputStyle    = { border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, background: "#fff", outline: "none" } as React.CSSProperties;
+const selectStyle   = { border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, background: "#fff", outline: "none", cursor: "pointer" } as React.CSSProperties;
+const th            = { padding: "12px 16px", textAlign: "left" as const, fontWeight: 600, fontSize: 12, color: "#475569", textTransform: "uppercase" as const, letterSpacing: "0.05em" };
+const td            = { padding: "14px 16px", color: "#1e293b", verticalAlign: "middle" as const } as React.CSSProperties;
+const tdMuted       = { padding: "14px 16px", color: "#64748b", verticalAlign: "middle" as const } as React.CSSProperties;
+const badgeSuccess  = { background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 } as React.CSSProperties;
 const badgeSecondary = { background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 } as React.CSSProperties;
-const tokenBadge = { fontSize: 12, color: "#475569", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 };
+const tokenBadge      = { fontSize: 12, color: "#475569", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 };
 const tokenBadgeTable = { fontSize: 13, background: "#f8fafc", padding: "2px 4px", borderRadius: 4, color: "#334155" };
-const mobileCard = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" };
-const tableWrapper = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" };
-const errorBanner = { border: "1px solid #fca5a5", background: "#fef2f2", color: "#dc2626", borderRadius: 8, padding: "12px 16px", fontSize: 14, marginBottom: 16 };
-
-// ✅ Suppression du paramètre inutilisé 'active' pour corriger TS6133
-const pageBtnStyle: React.CSSProperties = {
-  border: "1px solid #cbd5e1", 
-  background: "#fff", 
-  borderRadius: 8, 
-  padding: "8px 16px", 
-  fontSize: 14, 
-  cursor: "pointer", 
-  fontWeight: 600
-};
+const mobileCard    = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" };
+const tableWrapper  = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" };
+const errorBanner   = { border: "1px solid #fca5a5", background: "#fef2f2", color: "#dc2626", borderRadius: 8, padding: "12px 16px", fontSize: 14, marginBottom: 16 };
+const pageBtnStyle: React.CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 14, cursor: "pointer", fontWeight: 600 };
 
 export default LienPartageListPage;
