@@ -5,6 +5,7 @@ export interface User {
   firstName: string;
   lastName: string;
   globalRole?: string;
+  associationId?: number;
   active?: boolean;
   dateCreation?: string;
   lastModified?: string;

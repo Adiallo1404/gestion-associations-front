@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAssociations } from "../api/associationService";
-import { getUsers } from "../api/userService";
+import { getUsers, getMyProfile } from "../api/userService";
 import { getMembers } from "../api/memberService";
 import { getCotisations } from "../api/cotisationService";
 import { getRoles } from "../api/userAssociationRoleService";
@@ -83,13 +83,6 @@ const AVATAR_COLORS = [
   { bg: "#fef2f2", color: "#dc2626" },
 ];
 
-const NOTIFS = [
-  { icon: "👤", bg: "#eff6ff", text: "Nouveau membre ajouté à ADEMA",  time: "Il y a 30 min" },
-  { icon: "💰", bg: "#f0fdf4", text: "Cotisation validée — Ali BEN",    time: "Il y a 2h" },
-  { icon: "📧", bg: "#fffbeb", text: "Email envoyé à 12 membres",       time: "Hier, 14h30" },
-  { icon: "⚠️", bg: "#fef2f2", text: "3 cotisations en retard",         time: "Hier" },
-];
-
 const ROLE_BADGES: Record<string, { label: string; bg: string; color: string }> = {
   SUPER_ADMIN: { label: "Super Admin", bg: "#7c3aed", color: "#fff" },
   ADMIN:       { label: "Admin",       bg: "#1d4ed8", color: "#fff" },
@@ -108,8 +101,10 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { isMobile, isTablet } = useWindowSize();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [profileOpen, setProfileOpen]   = useState(false);
+  // ✅ ID de l'association de l'utilisateur connecté (null = pas encore chargé)
+  const [myAssociationId, setMyAssociationId] = useState<number | null | undefined>(undefined);
 
   const userInitials = user?.email
     ? user.email.substring(0, 2).toUpperCase()
@@ -137,7 +132,7 @@ export default function DashboardPage() {
   ]);
 
   const [recentRoles, setRecentRoles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]         = useState(true);
 
   const initials = (name?: string) =>
     name ? name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) : "??";
@@ -148,15 +143,58 @@ export default function DashboardPage() {
     window.location.href = '/login';
   };
 
+  // ✅ ÉTAPE 1 : charger l'associationId du profil connecté
   useEffect(() => {
+    const loadProfile = async () => {
+      if (isSuperAdmin) {
+        // SUPER_ADMIN : pas de filtre d'association
+        setMyAssociationId(null);
+        return;
+      }
+      try {
+        const me = await getMyProfile();
+        setMyAssociationId(me.associationId ?? null);
+      } catch (e) {
+        console.error("Impossible de récupérer le profil", e);
+        setMyAssociationId(null);
+      }
+    };
+    if (role) loadProfile();
+  }, [role, isSuperAdmin]);
+
+  // ✅ ÉTAPE 2 : charger les stats une fois myAssociationId résolu
+  useEffect(() => {
+    // Attendre que myAssociationId soit défini (undefined = pas encore chargé)
+    if (myAssociationId === undefined) return;
+
     const load = async () => {
       try {
+        // ✅ Filtre par association pour ADMIN, aucun filtre pour SUPER_ADMIN
+        const assocFilter = myAssociationId ? { associationId: myAssociationId } : {};
+
         const promises: Promise<any>[] = [
-          getAssociations(0, 1),
-          isAdminOrSuperAdmin ? getUsers({}, 0, 1) : Promise.resolve({ totalElements: 0 }),
-          getMembers({ page: 0, size: 1 }),
-          getCotisations({}, 0, 1),
-          isAdminOrSuperAdmin ? getRoles(0, 5) : Promise.resolve({ totalElements: 0, content: [] }),
+          // Associations : SUPER_ADMIN voit tout, ADMIN voit la sienne, USER voit 0
+          isSuperAdmin
+            ? getAssociations(0, 1)
+            : isAdminOrSuperAdmin && myAssociationId
+              ? getAssociations(0, 1) // 1 seule association pour l'admin
+              : Promise.resolve({ totalElements: 0 }),
+
+          // Utilisateurs : filtrés par association pour ADMIN
+          isAdminOrSuperAdmin
+            ? getUsers(assocFilter, 0, 1)
+            : Promise.resolve({ totalElements: 0 }),
+
+          // Membres : filtrés par association
+          getMembers({ page: 0, size: 1, ...assocFilter }),
+
+          // Cotisations : filtrées par association
+          getCotisations(assocFilter, 0, 1),
+
+          // Rôles : filtrés par association
+          isAdminOrSuperAdmin
+            ? getRoles(0, 5, myAssociationId ?? undefined)
+            : Promise.resolve({ totalElements: 0, content: [] }),
         ];
 
         const [assocRes, usersRes, membersRes, cotisRes, rolesRes] =
@@ -185,8 +223,9 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
+
     load();
-  }, []);
+  }, [myAssociationId]);
 
   useEffect(() => {
     if (loading) return;
@@ -273,6 +312,13 @@ export default function DashboardPage() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
+  // ✅ Filtrer les stats selon le rôle
+  const visibleStats = stats.filter((_, i) => {
+    if (isSuperAdmin) return true;                        // SUPER_ADMIN : tout
+    if (isAdminOrSuperAdmin) return i !== 0;             // ADMIN : sans "Associations"
+    return i === 2 || i === 3;                           // USER : Membres + Cotisations
+  });
+
   return (
     <div style={{
       display: "flex", width: "100%", minHeight: "100vh",
@@ -280,7 +326,6 @@ export default function DashboardPage() {
       background: "#f1f5f9", position: "relative",
     }}>
 
-      {/* ── TOPBAR MOBILE FIXE ── */}
       {isMobile && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, height: 52,
@@ -307,7 +352,6 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* ── SIDEBAR ── */}
       {(!isMobile || sidebarOpen) && (
         <aside style={{
           width: isMobile ? 260 : isTablet ? 220 : 255,
@@ -372,7 +416,6 @@ export default function DashboardPage() {
         </aside>
       )}
 
-      {/* ── MAIN ── */}
       <main style={{
         flex: 1,
         minHeight: "100vh",
@@ -380,7 +423,6 @@ export default function DashboardPage() {
         padding: isMobile ? "68px 12px 16px" : isTablet ? "20px 20px" : "24px 32px",
       }}>
 
-        {/* TOPBAR DESKTOP */}
         {!isMobile && (
           <div style={s.topBar}>
             <div>
@@ -424,64 +466,26 @@ export default function DashboardPage() {
 
                 {profileOpen && (
                   <>
-                    <div
-                      style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-                      onClick={() => setProfileOpen(false)}
-                    />
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setProfileOpen(false)} />
                     <div style={s.profileMenu}>
                       <div style={s.profileHeader}>
-                        <div style={{ ...s.avatarCircle, width: 44, height: 44, fontSize: 16, flexShrink: 0 }}>
-                          {userInitials}
-                        </div>
+                        <div style={{ ...s.avatarCircle, width: 44, height: 44, fontSize: 16, flexShrink: 0 }}>{userInitials}</div>
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>
-                            {user?.email?.split('@')[0]}
-                          </div>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                            {user?.email}
-                          </div>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{user?.email?.split('@')[0]}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{user?.email}</div>
                           {roleBadge && (
-                            <div style={{
-                              display: 'inline-block', marginTop: 5,
-                              background: roleBadge.bg, color: roleBadge.color,
-                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                            }}>
+                            <div style={{ display: 'inline-block', marginTop: 5, background: roleBadge.bg, color: roleBadge.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
                               {roleBadge.label}
                             </div>
                           )}
                         </div>
                       </div>
-
                       <div style={s.profileDivider} />
-
-                      <button style={s.profileItem}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                        onClick={() => { setProfileOpen(false); navigate('/users/me'); }}>
-                        👤 Mon profil
-                      </button>
-                      <button style={s.profileItem}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                        onClick={() => { setProfileOpen(false); navigate('/forgot-password'); }}>
-                        🔐 Changer mot de passe
-                      </button>
-                      <button style={s.profileItem}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                        onClick={() => { setProfileOpen(false); navigate('/notifications'); }}>
-                        🔔 Mes notifications
-                      </button>
-
+                      <button style={s.profileItem} onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')} onClick={() => { setProfileOpen(false); navigate('/users/me'); }}>👤 Mon profil</button>
+                      <button style={s.profileItem} onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')} onClick={() => { setProfileOpen(false); navigate('/forgot-password'); }}>🔐 Changer mot de passe</button>
+                      <button style={s.profileItem} onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')} onClick={() => { setProfileOpen(false); navigate('/notifications'); }}>🔔 Mes notifications</button>
                       <div style={s.profileDivider} />
-
-                      <button
-                        style={{ ...s.profileItem, color: '#dc2626' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#fef2f2')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                        onClick={handleLogout}>
-                        ⏻ Déconnexion
-                      </button>
+                      <button style={{ ...s.profileItem, color: '#dc2626' }} onMouseEnter={(e) => (e.currentTarget.style.background = '#fef2f2')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')} onClick={handleLogout}>⏻ Déconnexion</button>
                     </div>
                   </>
                 )}
@@ -490,7 +494,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ✅ TOPBAR MOBILE : titre + notif + avatar/profil */}
         {isMobile && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
@@ -499,75 +502,31 @@ export default function DashboardPage() {
                 {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
               </div>
             </div>
-
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {/* Bouton notifications */}
               <div style={s.notifBtn} onClick={() => navigate('/notifications')}>
                 🔔
                 <div style={s.notifDot} />
               </div>
-
-              {/* Avatar + menu profil */}
               <div style={{ position: 'relative' }}>
-                <div
-                  style={{ ...s.avatarCircle, cursor: 'pointer' }}
-                  onClick={() => setProfileOpen(!profileOpen)}
-                >
-                  {userInitials}
-                </div>
-
+                <div style={{ ...s.avatarCircle, cursor: 'pointer' }} onClick={() => setProfileOpen(!profileOpen)}>{userInitials}</div>
                 {profileOpen && (
                   <>
-                    <div
-                      style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-                      onClick={() => setProfileOpen(false)}
-                    />
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setProfileOpen(false)} />
                     <div style={{ ...s.profileMenu, right: 0, left: 'auto' }}>
                       <div style={s.profileHeader}>
-                        <div style={{ ...s.avatarCircle, width: 44, height: 44, fontSize: 16, flexShrink: 0 }}>
-                          {userInitials}
-                        </div>
+                        <div style={{ ...s.avatarCircle, width: 44, height: 44, fontSize: 16, flexShrink: 0 }}>{userInitials}</div>
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>
-                            {user?.email?.split('@')[0]}
-                          </div>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                            {user?.email}
-                          </div>
-                          {roleBadge && (
-                            <div style={{
-                              display: 'inline-block', marginTop: 5,
-                              background: roleBadge.bg, color: roleBadge.color,
-                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                            }}>
-                              {roleBadge.label}
-                            </div>
-                          )}
+                          <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{user?.email?.split('@')[0]}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{user?.email}</div>
+                          {roleBadge && <div style={{ display: 'inline-block', marginTop: 5, background: roleBadge.bg, color: roleBadge.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{roleBadge.label}</div>}
                         </div>
                       </div>
-
                       <div style={s.profileDivider} />
-
-                      <button style={s.profileItem}
-                        onClick={() => { setProfileOpen(false); navigate('/users/me'); }}>
-                        👤 Mon profil
-                      </button>
-                      <button style={s.profileItem}
-                        onClick={() => { setProfileOpen(false); navigate('/forgot-password'); }}>
-                        🔐 Changer mot de passe
-                      </button>
-                      <button style={s.profileItem}
-                        onClick={() => { setProfileOpen(false); navigate('/notifications'); }}>
-                        🔔 Mes notifications
-                      </button>
-
+                      <button style={s.profileItem} onClick={() => { setProfileOpen(false); navigate('/users/me'); }}>👤 Mon profil</button>
+                      <button style={s.profileItem} onClick={() => { setProfileOpen(false); navigate('/forgot-password'); }}>🔐 Changer mot de passe</button>
+                      <button style={s.profileItem} onClick={() => { setProfileOpen(false); navigate('/notifications'); }}>🔔 Mes notifications</button>
                       <div style={s.profileDivider} />
-
-                      <button
-                        style={{ ...s.profileItem, color: '#dc2626' }}
-                        onClick={handleLogout}>
-                        ⏻ Déconnexion
-                      </button>
+                      <button style={{ ...s.profileItem, color: '#dc2626' }} onClick={handleLogout}>⏻ Déconnexion</button>
                     </div>
                   </>
                 )}
@@ -582,28 +541,27 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
+            {/* ✅ Stats filtrées selon le rôle */}
             <div style={{
               display: "grid",
               gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(3, minmax(0,1fr))",
               gap: isMobile ? 10 : 14,
               marginBottom: 18,
             }}>
-              {stats
-                .filter((_, i) => !(!isAdminOrSuperAdmin && (i === 1 || i === 4)))
-                .map((stat) => (
-                  <div key={stat.label} style={s.sc}>
-                    <div style={{ ...s.scAccent, background: stat.accent }} />
-                    <div style={s.scTop}>
-                      <div style={{ ...s.scIcon, background: stat.iconBg, width: isMobile ? 32 : 40, height: isMobile ? 32 : 40 }}>{stat.icon}</div>
-                      <div style={{ ...s.scTrend, background: stat.up ? "#dcfce7" : "#fee2e2", color: stat.up ? "#15803d" : "#dc2626" }}>
-                        {stat.up ? "↑" : "↓"} {stat.trend}
-                      </div>
+              {visibleStats.map((stat) => (
+                <div key={stat.label} style={s.sc}>
+                  <div style={{ ...s.scAccent, background: stat.accent }} />
+                  <div style={s.scTop}>
+                    <div style={{ ...s.scIcon, background: stat.iconBg, width: isMobile ? 32 : 40, height: isMobile ? 32 : 40 }}>{stat.icon}</div>
+                    <div style={{ ...s.scTrend, background: stat.up ? "#dcfce7" : "#fee2e2", color: stat.up ? "#15803d" : "#dc2626" }}>
+                      {stat.up ? "↑" : "↓"} {stat.trend}
                     </div>
-                    <div style={{ ...s.scVal, fontSize: isMobile ? 24 : 32 }}>{stat.value.toLocaleString("fr-FR")}</div>
-                    <div style={s.scLbl}>{stat.label}</div>
-                    <div style={s.scSub}>{stat.sub}</div>
                   </div>
-                ))}
+                  <div style={{ ...s.scVal, fontSize: isMobile ? 24 : 32 }}>{stat.value.toLocaleString("fr-FR")}</div>
+                  <div style={s.scLbl}>{stat.label}</div>
+                  <div style={s.scSub}>{stat.sub}</div>
+                </div>
+              ))}
             </div>
 
             <div style={{
@@ -620,21 +578,25 @@ export default function DashboardPage() {
                   <canvas ref={lineRef} />
                 </div>
               </div>
-              {!isMobile && (
+
+              {/* ✅ Activité récente : masquée pour USER */}
+              {!isMobile && isAdminOrSuperAdmin && (
                 <div style={s.card}>
                   <div style={s.cardHdr}>
                     <span style={s.cardTitle}>🔔 Activité récente</span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {NOTIFS.map((n, i) => (
-                      <div key={i} style={s.notifItem}>
-                        <div style={{ ...s.notifIc, background: n.bg }}>{n.icon}</div>
-                        <div>
-                          <div style={s.notifTxt}>{n.text}</div>
-                          <div style={s.notifTime}>{n.time}</div>
+                    <div style={s.notifItem}>
+                      <div style={{ ...s.notifIc, background: "#eff6ff" }}>👤</div>
+                      <div>
+                        <div style={s.notifTxt}>Consultez les notifications pour l'activité récente</div>
+                        <div style={s.notifTime}>
+                          <button style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 12, padding: 0 }} onClick={() => navigate('/notifications')}>
+                            Voir les notifications →
+                          </button>
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -645,18 +607,15 @@ export default function DashboardPage() {
               gridTemplateColumns: isMobile || isTablet ? "1fr" : "1.4fr 1fr",
               gap: 16, marginBottom: 24,
             }}>
+              {/* ✅ Rôles assignés : uniquement ADMIN et SUPER_ADMIN */}
               {isAdminOrSuperAdmin && (
                 <div style={s.card}>
                   <div style={s.cardHdr}>
                     <span style={s.cardTitle}>🧾 Derniers rôles assignés</span>
-                    <button style={s.seeAll} onClick={() => navigate("/user-association-roles")}>
-                      Voir tout →
-                    </button>
+                    <button style={s.seeAll} onClick={() => navigate("/user-association-roles")}>Voir tout →</button>
                   </div>
                   {recentRoles.length === 0 ? (
-                    <p style={{ color: "#94a3b8", fontSize: 15, textAlign: "center", padding: "16px 0" }}>
-                      Aucune affectation.
-                    </p>
+                    <p style={{ color: "#94a3b8", fontSize: 15, textAlign: "center", padding: "16px 0" }}>Aucune affectation.</p>
                   ) : (
                     <table style={s.table}>
                       <thead>
@@ -674,24 +633,16 @@ export default function DashboardPage() {
                             <tr key={r.id ?? i}>
                               <td style={s.td}>
                                 <div style={s.ucell}>
-                                  <div style={{ ...s.av, background: av.bg, color: av.color }}>
-                                    {initials(r.userName)}
-                                  </div>
+                                  <div style={{ ...s.av, background: av.bg, color: av.color }}>{initials(r.userName)}</div>
                                   <div style={s.uname}>{r.userName ?? `Utilisateur ${r.id}`}</div>
                                 </div>
                               </td>
-                              {!isMobile && (
-                                <td style={{ ...s.td, color: "#64748b" }}>{r.associationName ?? "—"}</td>
-                              )}
+                              {!isMobile && <td style={{ ...s.td, color: "#64748b" }}>{r.associationName ?? "—"}</td>}
                               <td style={s.td}>
-                                <span style={{ ...s.bdg, background: av.bg, color: av.color }}>
-                                  {r.roleName ?? "—"}
-                                </span>
+                                <span style={{ ...s.bdg, background: av.bg, color: av.color }}>{r.roleName ?? "—"}</span>
                               </td>
                               <td style={s.td}>
-                                <button style={s.det} onClick={() => navigate("/user-association-roles")}>
-                                  Détail
-                                </button>
+                                <button style={s.det} onClick={() => navigate("/user-association-roles")}>Détail</button>
                               </td>
                             </tr>
                           );
@@ -711,18 +662,8 @@ export default function DashboardPage() {
                     <button
                       key={q.path}
                       style={s.qbtn}
-                      onMouseEnter={(e) => {
-                        const b = e.currentTarget as HTMLButtonElement;
-                        b.style.background = "#eff6ff";
-                        b.style.borderColor = "#bfdbfe";
-                        b.style.color = "#1d4ed8";
-                      }}
-                      onMouseLeave={(e) => {
-                        const b = e.currentTarget as HTMLButtonElement;
-                        b.style.background = "#f8fafc";
-                        b.style.borderColor = "#e2e8f0";
-                        b.style.color = "#334155";
-                      }}
+                      onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "#eff6ff"; b.style.borderColor = "#bfdbfe"; b.style.color = "#1d4ed8"; }}
+                      onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "#f8fafc"; b.style.borderColor = "#e2e8f0"; b.style.color = "#334155"; }}
                       onClick={() => navigate(q.path)}
                     >
                       {q.label}
