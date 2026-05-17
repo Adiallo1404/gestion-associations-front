@@ -5,6 +5,7 @@ import { getMyProfile } from "../api/userService";
 import { getAssociations } from "../api/associationService";
 import { useRole } from "../hooks/useRole";
 import type { EmailEnvoyeDto } from "../types/emailEnvoye";
+import type { Association } from "../types/association";  // ← ajouté
 
 const EmailEnvoyeFormPage = () => {
   const navigate = useNavigate();
@@ -18,13 +19,12 @@ const EmailEnvoyeFormPage = () => {
     associationId: undefined,
   });
 
-  const [associations, setAssociations] = useState<{ id: number; nom: string }[]>([]);
-  const [errors, setErrors]       = useState<Partial<Record<keyof EmailEnvoyeDto, string>>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg]   = useState<string | null>(null);
+  const [associations, setAssociations] = useState<Association[]>([]);  // ← corrigé
+  const [errors, setErrors]             = useState<Partial<Record<keyof EmailEnvoyeDto, string>>>({});
+  const [submitting, setSubmitting]     = useState(false);
+  const [serverError, setServerError]   = useState<string | null>(null);
+  const [successMsg, setSuccessMsg]     = useState<string | null>(null);
 
-  // ✅ Pré-remplir le nom de l'expéditeur + associationId depuis le profil connecté
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -41,7 +41,6 @@ const EmailEnvoyeFormPage = () => {
     loadProfile();
   }, []);
 
-  // ✅ Charger la liste des associations pour le SUPER_ADMIN
   useEffect(() => {
     if (!isSuperAdmin) return;
     const loadAssociations = async () => {
@@ -90,7 +89,6 @@ const EmailEnvoyeFormPage = () => {
     setSuccessMsg(null);
     try {
       const created = await sendEmail(form);
-      // ✅ Afficher le statut réel retourné par le backend
       if (created.statutEnvoi === "SUCCES") {
         setSuccessMsg(`✅ Email envoyé avec succès à ${created.destinataire} !`);
       } else {
@@ -130,14 +128,12 @@ const EmailEnvoyeFormPage = () => {
         </button>
       </div>
 
-      {/* ✅ Message de succès */}
       {successMsg && (
         <div style={{ background: "#f0fdf4", border: "1px solid #86efac", color: "#16a34a", borderRadius: 8, padding: "12px 16px", marginBottom: 20, fontWeight: 500 }}>
           {successMsg}
         </div>
       )}
 
-      {/* Message d'erreur */}
       {serverError && (
         <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px", marginBottom: 20 }}>
           {serverError}
@@ -199,7 +195,7 @@ const EmailEnvoyeFormPage = () => {
             )}
           </div>
 
-          {/* ASSOCIATION — select pour SUPER_ADMIN, champ readonly pour ADMIN */}
+          {/* ASSOCIATION */}
           {isAdminOrSuperAdmin && (
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6, color: "#374151" }}>
@@ -207,7 +203,6 @@ const EmailEnvoyeFormPage = () => {
               </label>
 
               {isSuperAdmin ? (
-                // SUPER_ADMIN : liste déroulante
                 <select
                   name="associationId"
                   value={form.associationId ?? ""}
@@ -216,11 +211,10 @@ const EmailEnvoyeFormPage = () => {
                 >
                   <option value="">— Aucune association —</option>
                   {associations.map(a => (
-                    <option key={a.id} value={a.id}>{a.nom}</option>
+                    <option key={a.id} value={a.id}>{a.name}</option>  // ← corrigé
                   ))}
                 </select>
               ) : (
-                // ADMIN : son association est pré-remplie et non modifiable
                 <input
                   type="text"
                   value={form.associationId ? `Association #${form.associationId}` : "Aucune"}
