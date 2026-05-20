@@ -5,9 +5,11 @@ import { getUsers, getMyProfile } from "../api/userService";
 import { getMembers } from "../api/memberService";
 import { getCotisations } from "../api/cotisationService";
 import { getRoles } from "../api/userAssociationRoleService";
+import { getProjetsByFilters } from "../api/projetService";
 import { useRole } from "../hooks/useRole";
 import { useAuth } from '../context/AuthContext';
 import { useWindowSize } from "../hooks/useWindowSize";
+import type { ProjetDto } from "../types/projet";
 import {
   Chart,
   LineElement, PointElement, LineController,
@@ -37,15 +39,25 @@ const ALL_MENU_SECTIONS = [
     title: "Finances",
     items: [
       { label: "💰 Cotisations",        path: "/cotisations",        roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "💳 Paiements",          path: "/paiements",          roles: ['SUPER_ADMIN', 'ADMIN'] },
       { label: "⚙️ Configs cotisation", path: "/cotisation-configs", roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "📋 Suivi cotisations",  path: "/cotisations/suivi",  roles: ['SUPER_ADMIN', 'ADMIN'] },
+    ],
+  },
+  {
+    // ✅ NOUVELLE SECTION : Actualités & Projet
+    title: "Actualités & Projet",
+    items: [
+      { label: "📁 Projets", path: "/projets", roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
     ],
   },
   {
     title: "Gestion",
     items: [
-      { label: "👤 Utilisateurs",      path: "/users",                  roles: ['SUPER_ADMIN', 'ADMIN'] },
-      { label: "🛡️ Rôles",            path: "/roles",                  roles: ['SUPER_ADMIN', 'ADMIN'] },
-      { label: "🔗 User-Assoc-Roles",  path: "/user-association-roles", roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "👤 Utilisateurs",     path: "/users",                  roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "🏢 Bureau",           path: "/bureaux",                roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+      { label: "🛡️ Rôles",           path: "/roles",                  roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { label: "🔗 User-Assoc-Roles", path: "/user-association-roles", roles: ['SUPER_ADMIN', 'ADMIN'] },
     ],
   },
   {
@@ -69,7 +81,8 @@ const ALL_MENU_SECTIONS = [
 const ALL_QUICK_ACTIONS = [
   { label: "🛡️ Assigner rôle",  path: "/user-association-roles/new", roles: ['SUPER_ADMIN', 'ADMIN'] },
   { label: "👥 Ajouter membre", path: "/members/new",                 roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { label: "💰 Cotisation",      path: "/cotisations/new",             roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { label: "💰 Cotisation",     path: "/cotisations/new",             roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { label: "📁 Nouveau projet", path: "/projets/new",                 roles: ['SUPER_ADMIN', 'ADMIN'] }, // ✅ NOUVEAU
   { label: "📧 Email",          path: "/emails-envoyes/new",          roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
   { label: "👤 Utilisateur",    path: "/users/new",                   roles: ['SUPER_ADMIN', 'ADMIN'] },
   { label: "📄 Document",       path: "/documents/new",               roles: ['SUPER_ADMIN', 'ADMIN'] },
@@ -89,6 +102,23 @@ const ROLE_BADGES: Record<string, { label: string; bg: string; color: string }> 
   USER:        { label: "Utilisateur", bg: "#16a34a", color: "#fff" },
 };
 
+// ✅ Helpers statut projet
+const STATUT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+  EN_ATTENTE: { bg: "#fef3c7", color: "#b45309", label: "En attente" },
+  EN_COURS:   { bg: "#e6f4ea", color: "#137333", label: "En cours"   },
+  TERMINE:    { bg: "#e8f0fe", color: "#1a73e8", label: "Terminé"    },
+  ANNULE:     { bg: "#fee2e2", color: "#dc2626", label: "Annulé"     },
+};
+
+const getDeviseSign = (code?: string) => {
+  switch ((code ?? "").toUpperCase()) {
+    case "USD": case "DOLLAR": case "$": return "$";
+    case "CFA": case "XOF": case "XAF": return "FCFA";
+    case "GNF": case "FG":              return "GNF";
+    default:                            return "€";
+  }
+};
+
 export default function DashboardPage() {
   const navigate  = useNavigate();
   const location  = useLocation();
@@ -101,20 +131,41 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { isMobile, isTablet } = useWindowSize();
 
-  const [sidebarOpen, setSidebarOpen]   = useState(false);
-  const [profileOpen, setProfileOpen]   = useState(false);
-  // ✅ ID de l'association de l'utilisateur connecté (null = pas encore chargé)
+  const [sidebarOpen, setSidebarOpen]         = useState(false);
+  const [profileOpen, setProfileOpen]         = useState(false);
   const [myAssociationId, setMyAssociationId] = useState<number | null | undefined>(undefined);
+
+  // ✅ État projets
+  const [recentProjets, setRecentProjets] = useState<ProjetDto[]>([]);
 
   const userInitials = user?.email
     ? user.email.substring(0, 2).toUpperCase()
     : 'ME';
 
   const menuSections = ALL_MENU_SECTIONS
-    .map(section => ({
-      ...section,
-      items: section.items.filter(item => role && item.roles.includes(role)),
-    }))
+    .map(section => {
+      if (section.title === "Finances") {
+        return {
+          ...section,
+          items: section.items
+            .map(item => {
+              if (item.path === "/cotisations/suivi") {
+                if (isSuperAdmin) return { ...item, path: "/cotisations/suivi/select" };
+                if (myAssociationId) return { ...item, path: `/cotisations/suivi/${myAssociationId}` };
+                return null;
+              }
+              return item;
+            })
+            .filter((item): item is NonNullable<typeof item> =>
+              item !== null && role !== null && role !== undefined && item.roles.includes(role)
+            ),
+        };
+      }
+      return {
+        ...section,
+        items: section.items.filter(item => role && item.roles.includes(role)),
+      };
+    })
     .filter(section => section.items.length > 0);
 
   const quickActions = ALL_QUICK_ACTIONS.filter(
@@ -129,6 +180,8 @@ export default function DashboardPage() {
     { label: "Membres",        value: 0, sub: "au total",     accent: "#d97706", iconBg: "#fffbeb", icon: "👥", trend: "+12", up: true  },
     { label: "Cotisations",    value: 0, sub: "enregistrées", accent: "#dc2626", iconBg: "#fef2f2", icon: "💰", trend: "-2",  up: false },
     { label: "Rôles assignés", value: 0, sub: "affectations", accent: "#7c3aed", iconBg: "#f5f3ff", icon: "🛡️", trend: "+1",  up: true  },
+    // ✅ NOUVELLE STAT : Projets
+    { label: "Projets",        value: 0, sub: "actifs",       accent: "#0891b2", iconBg: "#ecfeff", icon: "📁", trend: "+2",  up: true  },
   ]);
 
   const [recentRoles, setRecentRoles] = useState<any[]>([]);
@@ -143,61 +196,48 @@ export default function DashboardPage() {
     window.location.href = '/login';
   };
 
-  // ✅ ÉTAPE 1 : charger l'associationId du profil connecté
   useEffect(() => {
     const loadProfile = async () => {
-      if (isSuperAdmin) {
-        // SUPER_ADMIN : pas de filtre d'association
-        setMyAssociationId(null);
-        return;
-      }
+      if (isSuperAdmin) { setMyAssociationId(null); return; }
       try {
         const me = await getMyProfile();
         setMyAssociationId(me.associationId ?? null);
-      } catch (e) {
-        console.error("Impossible de récupérer le profil", e);
+      } catch {
         setMyAssociationId(null);
       }
     };
     if (role) loadProfile();
   }, [role, isSuperAdmin]);
 
-  // ✅ ÉTAPE 2 : charger les stats une fois myAssociationId résolu
   useEffect(() => {
-    // Attendre que myAssociationId soit défini (undefined = pas encore chargé)
     if (myAssociationId === undefined) return;
 
     const load = async () => {
       try {
-        // ✅ Filtre par association pour ADMIN, aucun filtre pour SUPER_ADMIN
         const assocFilter = myAssociationId ? { associationId: myAssociationId } : {};
 
         const promises: Promise<any>[] = [
-          // Associations : SUPER_ADMIN voit tout, ADMIN voit la sienne, USER voit 0
           isSuperAdmin
             ? getAssociations(0, 1)
             : isAdminOrSuperAdmin && myAssociationId
-              ? getAssociations(0, 1) // 1 seule association pour l'admin
+              ? getAssociations(0, 1)
               : Promise.resolve({ totalElements: 0 }),
-
-          // Utilisateurs : filtrés par association pour ADMIN
           isAdminOrSuperAdmin
             ? getUsers(assocFilter, 0, 1)
             : Promise.resolve({ totalElements: 0 }),
-
-          // Membres : filtrés par association
           getMembers({ page: 0, size: 1, ...assocFilter }),
-
-          // Cotisations : filtrées par association
           getCotisations(assocFilter, 0, 1),
-
-          // Rôles : filtrés par association
           isAdminOrSuperAdmin
             ? getRoles(0, 5, myAssociationId ?? undefined)
             : Promise.resolve({ totalElements: 0, content: [] }),
+          // ✅ On récupère le total des projets + les 5 derniers
+          getProjetsByFilters(
+            myAssociationId ? { associationId: myAssociationId } : {},
+            0, 5
+          ),
         ];
 
-        const [assocRes, usersRes, membersRes, cotisRes, rolesRes] =
+        const [assocRes, usersRes, membersRes, cotisRes, rolesRes, projetsRes] =
           await Promise.allSettled(promises);
 
         const total = (r: PromiseSettledResult<any>) =>
@@ -211,12 +251,19 @@ export default function DashboardPage() {
             total(membersRes),
             total(cotisRes),
             total(rolesRes),
+            total(projetsRes), // ✅ index 5 → Projets
           ][i],
         })));
 
         if (rolesRes.status === "fulfilled") {
           setRecentRoles(rolesRes.value?.content?.slice(0, 5) ?? []);
         }
+
+        // ✅ On stocke les 5 derniers projets pour le bloc dédié
+        if (projetsRes.status === "fulfilled") {
+          setRecentProjets(projetsRes.value?.content?.slice(0, 5) ?? []);
+        }
+
       } catch (e) {
         console.error("Erreur dashboard", e);
       } finally {
@@ -312,11 +359,10 @@ export default function DashboardPage() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // ✅ Filtrer les stats selon le rôle
   const visibleStats = stats.filter((_, i) => {
-    if (isSuperAdmin) return true;                        // SUPER_ADMIN : tout
-    if (isAdminOrSuperAdmin) return i !== 0;             // ADMIN : sans "Associations"
-    return i === 2 || i === 3;                           // USER : Membres + Cotisations
+    if (isSuperAdmin) return true;
+    if (isAdminOrSuperAdmin) return i !== 0;
+    return i === 2 || i === 3 || i === 5; // USER voit Membres + Cotisations + Projets
   });
 
   return (
@@ -541,7 +587,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* ✅ Stats filtrées selon le rôle */}
+            {/* ── Stat Cards ── */}
             <div style={{
               display: "grid",
               gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(3, minmax(0,1fr))",
@@ -564,6 +610,7 @@ export default function DashboardPage() {
               ))}
             </div>
 
+            {/* ── Charts row ── */}
             <div style={{
               display: "grid",
               gridTemplateColumns: isMobile || isTablet ? "1fr" : "1.6fr 1fr",
@@ -579,7 +626,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* ✅ Activité récente : masquée pour USER */}
               {!isMobile && isAdminOrSuperAdmin && (
                 <div style={s.card}>
                   <div style={s.cardHdr}>
@@ -602,12 +648,12 @@ export default function DashboardPage() {
               )}
             </div>
 
+            {/* ── Roles + Quick actions ── */}
             <div style={{
               display: "grid",
               gridTemplateColumns: isMobile || isTablet ? "1fr" : "1.4fr 1fr",
-              gap: 16, marginBottom: 24,
+              gap: 16, marginBottom: 16,
             }}>
-              {/* ✅ Rôles assignés : uniquement ADMIN et SUPER_ADMIN */}
               {isAdminOrSuperAdmin && (
                 <div style={s.card}>
                   <div style={s.cardHdr}>
@@ -680,6 +726,156 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
+
+            {/* ══════════════════════════════════════════════════════════════
+                ✅ NOUVELLE SECTION : Derniers projets
+            ══════════════════════════════════════════════════════════════ */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={s.card}>
+                <div style={s.cardHdr}>
+                  <span style={s.cardTitle}>📁 Derniers projets</span>
+                  <button style={s.seeAll} onClick={() => navigate("/projets")}>Voir tout →</button>
+                </div>
+
+                {recentProjets.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
+                    Aucun projet enregistré.{" "}
+                    {isAdminOrSuperAdmin && (
+                      <button
+                        style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: 14, fontWeight: 600 }}
+                        onClick={() => navigate("/projets/new")}
+                      >
+                        Créer le premier →
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3, 1fr)",
+                    gap: 14,
+                  }}>
+                    {recentProjets.map((p) => {
+                      const st     = STATUT_STYLE[p.statut] ?? STATUT_STYLE.EN_ATTENTE;
+                      const sign   = getDeviseSign(p.devise);
+                      const budget = p.budget ?? 0;
+                      const depenses = (p.totalDepenses as unknown as number) ?? 0;
+                      const pct    = budget > 0 ? Math.min(Math.round((depenses / budget) * 100), 100) : 0;
+                      const barColor = pct >= 90 ? "#ef4444" : pct >= 60 ? "#f59e0b" : "#22c55e";
+
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => navigate(`/projets/${p.id}`)}
+                          style={{
+                            border: "1px solid #e2e8f0",
+                            borderRadius: 10,
+                            padding: "16px",
+                            cursor: "pointer",
+                            transition: "box-shadow 0.15s, border-color 0.15s",
+                            background: "#fafafa",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 10,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
+                            e.currentTarget.style.borderColor = "#bfdbfe";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.boxShadow = "none";
+                            e.currentTarget.style.borderColor = "#e2e8f0";
+                          }}
+                        >
+                          {/* Nom + statut */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a", lineHeight: 1.3 }}>
+                              {p.nom}
+                            </span>
+                            <span style={{
+                              flexShrink: 0,
+                              padding: "3px 8px",
+                              borderRadius: 5,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background: st.bg,
+                              color: st.color,
+                            }}>
+                              {st.label}
+                            </span>
+                          </div>
+
+                          {/* Chef de projet */}
+                          {(p.chefDeProjetPrenom || p.chefDeProjetNom) && (
+                            <div style={{ fontSize: 12, color: "#64748b" }}>
+                              👤 {p.chefDeProjetPrenom} {p.chefDeProjetNom}
+                            </div>
+                          )}
+
+                          {/* Budget vs dépenses */}
+                          <div style={{ fontSize: 12, color: "#475569" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                              <span>Budget : <strong>{budget > 0 ? `${budget.toLocaleString("fr-FR")} ${sign}` : "—"}</strong></span>
+                              <span style={{ color: "#dc2626", fontWeight: 600 }}>
+                                {depenses > 0 ? `-${depenses.toLocaleString("fr-FR")} ${sign}` : `0 ${sign}`}
+                              </span>
+                            </div>
+                            {/* Barre de progression budget */}
+                            {budget > 0 && (
+                              <div style={{ height: 5, background: "#e2e8f0", borderRadius: 99, overflow: "hidden" }}>
+                                <div style={{
+                                  height: "100%",
+                                  width: `${pct}%`,
+                                  background: barColor,
+                                  borderRadius: 99,
+                                  transition: "width 0.4s ease",
+                                }} />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Dates */}
+                          {(p.dateDebut || p.dateFin) && (
+                            <div style={{ fontSize: 11, color: "#94a3b8", display: "flex", gap: 10 }}>
+                              {p.dateDebut && (
+                                <span>📅 {new Date(p.dateDebut).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                              )}
+                              {p.dateFin && (
+                                <span>→ {new Date(p.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Bouton créer si admin */}
+                {isAdminOrSuperAdmin && recentProjets.length > 0 && (
+                  <div style={{ marginTop: 16, textAlign: "right" }}>
+                    <button
+                      onClick={() => navigate("/projets/new")}
+                      style={{
+                        padding: "8px 16px",
+                        background: "#0891b2",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 7,
+                        cursor: "pointer",
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      + Nouveau projet
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* ── fin section projets ── */}
+
           </>
         )}
       </main>
