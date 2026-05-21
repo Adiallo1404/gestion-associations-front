@@ -1,4 +1,4 @@
-import api from "./api";  // ← "api" et non "axiosInstance"
+import api from "./axiosConfig"; 
 
 export interface SendEmailPayload {
   nomExpediteur: string;
