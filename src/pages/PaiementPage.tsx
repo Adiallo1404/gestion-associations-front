@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+
 import { useNavigate, useParams } from "react-router-dom";
 import { getCotisations, getCotisationById, updateCotisation } from "../api/cotisationService";
 import { getAssociations } from "../api/associationService";
 import { memberService } from "../api/memberService";
+import { sendEmail } from "../api/emailEnvoyeService";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
 
@@ -107,26 +109,18 @@ ${getAssocName(c.associationId)}`,
     });
   };
 
-  // ── Envoi email via /v1/emails-envoyes ───────────────────────────────────
+  // ── Envoi email via emailService (axiosInstance) ──────────────────────────
   const handleSendEmail = async () => {
     if (!emailPanel) return;
     setSendingEmail(true);
     try {
-      const res = await fetch("/v1/emails-envoyes", {
-        method:  "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          nomExpediteur: emailPanel.nomExpediteur,
-          destinataire:  emailPanel.destinataire,
-          sujet:         emailPanel.sujet,
-          contenu:       emailPanel.contenu,
-          associationId: emailPanel.associationId ?? null,
-        }),
+      await sendEmail({
+        nomExpediteur: emailPanel.nomExpediteur,
+        destinataire:  emailPanel.destinataire,
+        sujet:         emailPanel.sujet,
+        contenu:       emailPanel.contenu,
+        associationId: emailPanel.associationId ?? undefined,
       });
-      if (!res.ok) throw new Error();
       toast.success(`✅ Email envoyé à ${emailPanel.destinataire}`);
       setEmailPanel(null);
     } catch {
