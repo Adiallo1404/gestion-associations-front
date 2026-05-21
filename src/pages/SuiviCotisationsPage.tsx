@@ -3,8 +3,8 @@ import { useParams } from "react-router-dom";
 import {
   getSuiviCotisations,
   getMembresNonCotisants,
-  type MembreCotisationStatus,
 } from "../api/cotisationService";
+import type { MembreCotisationStatus } from "../types/cotisation";
 import { getAssociations } from "../api/associationService";
 
 type Onglet = "tous" | "non-cotisants";
@@ -39,10 +39,8 @@ export default function SuiviCotisationsPage() {
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
 
-  // Filtre par membre
   const [rechercheMembre, setRechercheMembre] = useState("");
 
-  // Période par défaut : mois en cours
   const today = new Date();
   const defaultDebut = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -51,7 +49,6 @@ export default function SuiviCotisationsPage() {
   const [debut, setDebut] = useState(defaultDebut);
   const [fin, setFin]     = useState(defaultFin);
 
-  // Chargement du nom de l'association
   useEffect(() => {
     const loadAssoc = async () => {
       try {
@@ -65,7 +62,6 @@ export default function SuiviCotisationsPage() {
     if (associationId) loadAssoc();
   }, [associationId]);
 
-  // Chargement des données selon l'onglet
   useEffect(() => {
     if (!associationId || !debut || !fin) return;
     const load = async () => {
@@ -85,7 +81,6 @@ export default function SuiviCotisationsPage() {
     load();
   }, [associationId, debut, fin, onglet]);
 
-  // Filtrage par nom/prénom côté client
   const membresFiltres = useMemo(() => {
     const q = rechercheMembre.trim().toLowerCase();
     if (!q) return membres;
@@ -95,7 +90,6 @@ export default function SuiviCotisationsPage() {
     );
   }, [membres, rechercheMembre]);
 
-  // Statistiques — recalculées sur la liste filtrée
   const total      = membresFiltres.length;
   const nbPayes    = membresFiltres.filter(m => m.aCotise).length;
   const nbEnRetard = membresFiltres.filter(m => m.enRetard).length;
@@ -119,7 +113,7 @@ export default function SuiviCotisationsPage() {
         </button>
       </div>
 
-      {/* FILTRES : PÉRIODE + MEMBRE */}
+      {/* FILTRES */}
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px", marginBottom: 20, display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div>
           <label style={{ display: "block", fontSize: 13, color: "#6b7280", marginBottom: 4, fontWeight: 500 }}>
@@ -144,7 +138,6 @@ export default function SuiviCotisationsPage() {
           />
         </div>
 
-        {/* Séparateur visuel */}
         <div style={{ width: 1, height: 36, background: "#e5e7eb", alignSelf: "flex-end" }} />
 
         <div style={{ flex: 1, minWidth: 200 }}>
