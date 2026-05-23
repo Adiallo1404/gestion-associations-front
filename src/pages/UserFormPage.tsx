@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getUserById, createUser, updateUser } from '../api/userService';
+import { getAssociations } from '../api/associationService';
 import type { User, CreateUserDto } from '../types/user';
+import type { Association } from '../types/association';
 
 export default function UserFormPage() {
   const { id } = useParams();
@@ -14,8 +16,24 @@ export default function UserFormPage() {
   const [globalRole, setGlobalRole] = useState('USER');
   const [active, setActive] = useState(true);
   const [password, setPassword] = useState('');
+  const [associationId, setAssociationId] = useState<number | undefined>(undefined); // ✅
+  const [roleId, setRoleId] = useState<number>(2); // ✅ 2 = USER par défaut
+  const [associations, setAssociations] = useState<Association[]>([]); // ✅
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ Chargement des associations
+  useEffect(() => {
+    const fetchAssociations = async () => {
+      try {
+        const data = await getAssociations(0, 100);
+        setAssociations(data.content ?? []);
+      } catch {
+        console.error('Erreur chargement associations');
+      }
+    };
+    fetchAssociations();
+  }, []);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -57,6 +75,8 @@ export default function UserFormPage() {
           lastName,
           globalRole: globalRole || undefined,
           password,
+          associationId,  // ✅
+          roleId,         // ✅
         };
         await createUser(payload);
         navigate('/users');
@@ -121,6 +141,34 @@ export default function UserFormPage() {
                 <button type="button" onClick={() => setActive(false)} style={!active ? styles.toggleActive : styles.toggleInactive}>Inactif</button>
               </div>
             </div>
+
+            {/* ✅ Association */}
+            {!isEdit && (
+              <div style={styles.field}>
+                <label style={styles.label}>Association</label>
+                <select
+                  value={associationId ?? ''}
+                  onChange={(e) => setAssociationId(e.target.value ? Number(e.target.value) : undefined)}
+                  style={styles.input}
+                >
+                  <option value="">-- Sélectionner --</option>
+                  {associations.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* ✅ Rôle dans l'association */}
+            {!isEdit && (
+              <div style={styles.field}>
+                <label style={styles.label}>Rôle dans l'association</label>
+                <select value={roleId} onChange={(e) => setRoleId(Number(e.target.value))} style={styles.input}>
+                  <option value={2}>USER</option>
+                  <option value={1}>ADMIN</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <div style={styles.divider} />

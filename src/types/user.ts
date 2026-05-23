@@ -18,6 +18,8 @@ export interface CreateUserDto {
   lastName: string;
   globalRole?: string;
   password: string;
+  associationId?: number;
+  roleId?: number; 
 }
 
 export interface UserFilter {
