@@ -15,6 +15,7 @@ export interface Cotisation {
   associationId: number
   memberId: number
   dateCreation?: string   
+}
 
 /** Payload for create/update operations (server-managed fields excluded). */
 export type CotisationInput = Omit<Cotisation, 'id' | 'dateCreation' | 'datePaiement'>

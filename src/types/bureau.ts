@@ -45,7 +45,7 @@ export interface Bureau {
  * `associationId` and `memberId` remain required: the backend resolves
  * the actual entities from these IDs.
  */
-export type BureauInput = Omit
+export type BureauInput = Omit<
   Bureau,
   | 'id'
   | 'dateCreation'
