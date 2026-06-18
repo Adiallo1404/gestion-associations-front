@@ -29,7 +29,7 @@ export default function EmailEnvoyeFormPage() {
   });
 
   const [associations, setAssociations] = useState<Association[]>([]);
-  const [errors, setErrors] = useState
+  const [errors, setErrors] = useState<
     Partial<Record<keyof SendEmailRequest, string>>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
