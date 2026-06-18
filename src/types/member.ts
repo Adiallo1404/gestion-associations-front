@@ -46,3 +46,13 @@ export interface UpdateMemberRequest {
 
   associationId: number;
 }
+
+// Filter shape for member list queries
+export interface MemberFilter {
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
+  active?: boolean
+  associationId?: number
+}

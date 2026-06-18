@@ -1,10 +1,9 @@
-import {
+import type {
   FormEvent,
-  useEffect,
-  useState,
-  type ChangeEvent,
-  type CSSProperties,
+  ChangeEvent,
+  CSSProperties,
 } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { emailEnvoyeService } from "../api/emailEnvoyeService";
@@ -30,16 +29,13 @@ export default function EmailEnvoyeFormPage() {
   });
 
   const [associations, setAssociations] = useState<Association[]>([]);
-  const [errors, setErrors] = useState<
+  const [errors, setErrors] = useState
     Partial<Record<keyof SendEmailRequest, string>>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  /**
-   * Loads the authenticated user's profile to prefill sender information.
-   */
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -50,7 +46,6 @@ export default function EmailEnvoyeFormPage() {
           nomExpediteur: `${profile.firstName ?? ""} ${
             profile.lastName ?? ""
           }`.trim(),
-          associationId: profile.associationId ?? undefined,
         }));
       } catch (error) {
         console.error("Failed to load authenticated profile", error);
@@ -60,9 +55,6 @@ export default function EmailEnvoyeFormPage() {
     loadProfile();
   }, []);
 
-  /**
-   * Super admins can select the source association manually.
-   */
   useEffect(() => {
     if (!isSuperAdmin) return;
 

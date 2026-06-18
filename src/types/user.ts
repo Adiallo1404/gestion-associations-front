@@ -21,19 +21,16 @@ export const GLOBAL_ROLE_LABELS: Record<GlobalRole, string> = {
  */
 export interface UserDto {
   id: number;
-
   email: string;
-
   firstName: string;
-
   lastName: string;
-
   globalRole?: GlobalRole | null;
-
   active?: boolean | null;
-
   dateCreation?: string | null;
 }
+
+// Alias for backward compatibility
+export type User = UserDto;
 
 /**
  * Payload used to create a user.
@@ -41,17 +38,11 @@ export interface UserDto {
  */
 export interface CreateUserDto {
   email: string;
-
   firstName: string;
-
   lastName: string;
-
   globalRole?: GlobalRole | null;
-
   password: string;
-
   associationId?: number | null;
-
   roleId?: number | null;
 }
 
@@ -61,11 +52,8 @@ export interface CreateUserDto {
  */
 export interface UpdateUserRequest {
   email: string;
-
   firstName: string;
-
   lastName: string;
-
   globalRole?: GlobalRole | null;
 }
 
@@ -75,46 +63,29 @@ export interface UpdateUserRequest {
  */
 export interface UpdateMyProfileRequest {
   firstName: string;
-
   lastName: string;
-
   email?: string;
 }
 
 export interface UserFilter {
   email?: string;
-
   firstName?: string;
-
   lastName?: string;
-
   active?: boolean;
-
   globalRole?: GlobalRole;
-
   associationId?: number;
-
   page?: number;
-
   size?: number;
-
   sort?: string | string[];
 }
 
 export interface UserPageResponse {
   content: UserDto[];
-
   totalElements: number;
-
   totalPages: number;
-
   number: number;
-
   size: number;
-
   first: boolean;
-
   last: boolean;
-
   empty: boolean;
 }

@@ -95,7 +95,7 @@ export default function BureauFormPage() {
     }
 
     memberService
-      .getAll({ associationId: form.associationId, page: 0, size: 1000 })
+      .getAll({ associationId: Number(form.associationId), page: 0, size: 1000 })
       .then((r) => setMembers(r.content))
       .catch(() => toast.error("Erreur lors du chargement des membres"));
   }, [form.associationId]);

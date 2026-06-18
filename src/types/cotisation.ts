@@ -17,8 +17,20 @@ export interface Cotisation {
   dateCreation?: string   
 }
 
+// Alias for backward compatibility
+export type CotisationDto = Cotisation
+
 /** Payload for create/update operations (server-managed fields excluded). */
 export type CotisationInput = Omit<Cotisation, 'id' | 'dateCreation' | 'datePaiement'>
+
+// Filter shape for cotisation list queries
+export interface CotisationFilter {
+  statut?: StatutCotisation
+  associationId?: number
+  memberId?: number
+  periodeDebut?: string
+  periodeFin?: string
+}
 
 // Individual contribution tracking per member
 export interface MembreCotisationStatus {

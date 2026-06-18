@@ -11,20 +11,15 @@ export type StatutNotification = "NON_LUE" | "LUE" | "ARCHIVEE";
 
 export interface NotificationDto {
   id: number;
-
   titre: string;
   message: string;
-
   typeNotification: TypeNotification;
   statut: StatutNotification;
-
   dateCreation: string;
   dateLecture?: string | null;
   dateExpiration?: string | null;
-
   lienAction?: string | null;
   envoyeeParEmail: boolean;
-
   associationId: number;
   destinataireId: number;
   memberId?: number | null;
@@ -33,12 +28,12 @@ export interface NotificationDto {
 export interface CreateNotificationRequest {
   titre: string;
   message: string;
-
   typeNotification: TypeNotification;
-
+  statut?: StatutNotification;
+  dateCreation?: string;
   dateExpiration?: string | null;
   lienAction?: string | null;
-
+  envoyeeParEmail?: boolean;
   associationId: number;
   destinataireId: number;
   memberId?: number | null;
@@ -49,7 +44,6 @@ export interface NotificationFilter {
   associationId?: number;
   statut?: StatutNotification;
   typeNotification?: TypeNotification;
-
   page?: number;
   size?: number;
   sort?: string | string[];
@@ -57,13 +51,10 @@ export interface NotificationFilter {
 
 export interface NotificationPageResponse {
   content: NotificationDto[];
-
   totalElements: number;
   totalPages: number;
-
   size: number;
   number: number;
-
   first: boolean;
   last: boolean;
   empty: boolean;

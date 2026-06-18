@@ -125,7 +125,7 @@ export default function CotisationFormPage() {
   // Reload members whenever the selected association changes.
   useEffect(() => {
     if (form.associationId) {
-      memberService.getAll({ associationId: form.associationId, page: 0, size: 1000 }).then((res) => {
+        memberService.getAll({ associationId: Number(form.associationId), page: 0, size: 1000 }).then((res) => {
         setMembers(res.content)
         if (!id) setForm(prev => ({ ...prev, memberId: '' }))
       })

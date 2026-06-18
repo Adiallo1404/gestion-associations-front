@@ -1,12 +1,5 @@
-import {
-  FormEvent,
-  KeyboardEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
+import type { FormEvent, KeyboardEvent, CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { emailCodeService } from "../api/emailCodeService";

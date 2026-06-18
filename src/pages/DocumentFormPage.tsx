@@ -1,4 +1,5 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAssociations } from "../api/associationService";
 import { uploadDocumentFile } from "../api/documentService";

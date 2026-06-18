@@ -62,7 +62,7 @@ export default function MemberListPage() {
   ) => {
     setPage(0);
 
-    setFilters((currentFilters) => ({
+    setFilters((currentFilters: MemberFilter) => ({
       ...currentFilters,
       [key]: value || undefined,
     }));

@@ -1,10 +1,5 @@
-import {
-  FormEvent,
-  useCallback,
-  useEffect,
-  useState,
-  type CSSProperties,
-} from "react";
+import type { FormEvent, CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";

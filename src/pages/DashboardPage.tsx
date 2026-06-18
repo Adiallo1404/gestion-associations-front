@@ -765,7 +765,7 @@ export default function DashboardPage() {
                   >
                     {recentProjets.map((project) => {
                       const status = STATUT_STYLE[project.statut] ?? STATUT_STYLE.EN_ATTENTE;
-                      const sign = getDeviseSign(project.devise);
+                      const sign = getDeviseSign(project.devise ?? "EUR");
                       const budget = project.budget ?? 0;
                       const depenses = (project.totalDepenses as unknown as number) ?? 0;
                       const pct = budget > 0 ? Math.min(Math.round((depenses / budget) * 100), 100) : 0;

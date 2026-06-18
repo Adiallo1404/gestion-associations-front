@@ -106,7 +106,7 @@ export default function CotisationDetailPage() {
               <div>
                 <p style={st.idLabel}>Cotisation #{cotisation.id}</p>
                 <div style={st.amount}>{cotisation.montant} {sym}</div>
-                {cotisation.montantPenalite > 0 && (
+                  {(cotisation.montantPenalite ?? 0) > 0 && (
                   <p style={st.penaltyLabel}>+ pénalité : {cotisation.montantPenalite} {sym}</p>
                 )}
               </div>

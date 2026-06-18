@@ -1,9 +1,5 @@
-import {
-  FormEvent,
-  useState,
-  type ChangeEvent,
-  type CSSProperties,
-} from "react";
+import type { FormEvent, ChangeEvent, CSSProperties } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { createLien } from "../api/lienPartageService";

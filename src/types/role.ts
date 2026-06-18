@@ -41,6 +41,18 @@ export interface RoleDto {
   modificationDate?: string;
 }
 
+// Alias for create operations
+export type CreateRoleRequest = Omit<RoleDto, 'id' | 'creationDate' | 'modificationDate'>
+
+// Alias for update operations
+export type UpdateRoleRequest = Partial<CreateRoleRequest>
+
+// Filter shape for role list queries
+export interface RoleFilter {
+  name?: string
+  permissions?: Permission[]
+}
+
 export interface RolePageResponse {
   content: RoleDto[];
   totalElements: number;

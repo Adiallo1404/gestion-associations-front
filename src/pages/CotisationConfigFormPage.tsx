@@ -1,10 +1,8 @@
-import {
+import type {
   FormEvent,
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
+  CSSProperties,
 } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
