@@ -1,269 +1,295 @@
-import React, { useState } from "react";
+import {
+  FormEvent,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { createLien } from "../api/lienPartageService";
-import type { LienPartage } from "../types/lienPartage";
+import type { CreateLienPartageRequest } from "../types/lienPartage";
 
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    padding: "32px 40px",
-    textAlign: "left",
-    maxWidth: "560px",
-  },
-  backBtn: {
-    background: "transparent",
-    border: "none",
-    color: "var(--text)",
-    fontSize: "14px",
-    cursor: "pointer",
-    padding: "0 0 16px 0",
-    fontFamily: "var(--sans)",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-  title: {
-    fontSize: "24px",
-    fontWeight: 500,
-    color: "var(--text-h)",
-    margin: "0 0 24px 0",
-  },
-  alert: {
-    border: "1px solid #fca5a5",
-    background: "#fef2f2",
-    color: "#dc2626",
-    borderRadius: "8px",
-    padding: "10px 16px",
-    fontSize: "14px",
-    marginBottom: "20px",
-  },
-  card: {
-    border: "1px solid var(--border)",
-    borderRadius: "12px",
-    padding: "24px",
-  },
-  field: {
-    marginBottom: "20px",
-  },
-  label: {
-    display: "block",
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "var(--text-h)",
-    marginBottom: "6px",
-  },
-  hint: {
-    fontSize: "12px",
-    color: "var(--text)",
-    marginTop: "4px",
-  },
-  input: {
-    width: "100%",
-    border: "1px solid var(--border)",
-    borderRadius: "8px",
-    padding: "8px 12px",
-    fontSize: "14px",
-    color: "var(--text-h)",
-    background: "var(--bg)",
-    fontFamily: "var(--sans)",
-    outline: "none",
-    boxSizing: "border-box" as const,
-  },
-  switchRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "24px",
-  },
-  switchLabel: {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "var(--text-h)",
-  },
-  actions: {
-    display: "flex",
-    gap: "10px",
-    marginTop: "4px",
-  },
-  btnPrimary: {
-    background: "var(--accent)",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    padding: "9px 24px",
-    fontSize: "14px",
-    cursor: "pointer",
-    fontFamily: "var(--sans)",
-    fontWeight: 500,
-  },
-  btnOutline: {
-    background: "transparent",
-    color: "var(--text)",
-    border: "1px solid var(--border)",
-    borderRadius: "8px",
-    padding: "9px 24px",
-    fontSize: "14px",
-    cursor: "pointer",
-    fontFamily: "var(--sans)",
-  },
-  required: {
-    color: "#dc2626",
-    marginLeft: "3px",
-  },
+interface LienPartageFormState {
+  dateExpiration: string;
+  nombreAccesMax: string;
+  documentId: string;
+}
+
+const initialFormState: LienPartageFormState = {
+  dateExpiration: "",
+  nombreAccesMax: "1",
+  documentId: "",
 };
 
-const LienPartageFormPage: React.FC = () => {
+export default function LienPartageFormPage() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState<Partial<LienPartage>>({
-    token: "",
-    dateExpiration: "",
-    nombreAccesMax: 1,
-    actif: true,
-    documentId: undefined,
-    creeParId: undefined,
-  });
-
+  const [form, setForm] = useState<LienPartageFormState>(initialFormState);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox"
-          ? (e.target as HTMLInputElement).checked
-          : type === "number"
-          ? value === "" ? undefined : Number(value)
-          : value,
+  const updateField = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = event.target;
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
     }));
   };
 
-  const handleSubmit = async () => {
-    setError(null);
+  const validateForm = (): boolean => {
     if (!form.documentId) {
       setError("Le Document ID est obligatoire.");
-      return;
+      return false;
     }
+
     if (!form.dateExpiration) {
       setError("La date d'expiration est obligatoire.");
-      return;
+      return false;
     }
-    setSubmitting(true);
+
+    if (Number(form.nombreAccesMax) < 1) {
+      setError("Le nombre d'accès maximum doit être au moins 1.");
+      return false;
+    }
+
+    if (new Date(form.dateExpiration) <= new Date()) {
+      setError("La date d'expiration doit être dans le futur.");
+      return false;
+    }
+
+    setError(null);
+    return true;
+  };
+
+  const formatDateTimeForBackend = (value: string): string => {
+    return value.length === 16 ? `${value}:00` : value;
+  };
+
+  const buildPayload = (): CreateLienPartageRequest => ({
+    documentId: Number(form.documentId),
+    dateExpiration: formatDateTimeForBackend(form.dateExpiration),
+    nombreAccesMax: Number(form.nombreAccesMax),
+  });
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!validateForm()) return;
+
     try {
-      const payload: LienPartage = {
-        ...(form as LienPartage),
-        token: form.token?.trim() === "" ? undefined : form.token,
-      };
-      await createLien(payload);
+      setIsSubmitting(true);
+
+      await createLien(buildPayload());
+
       navigate("/liens-partage");
-    } catch {
-      setError("Erreur lors de la création du lien de partage.");
+    } catch (submitError) {
+      console.error("Failed to create shared link", submitError);
+
+      const message = axios.isAxiosError(submitError)
+        ? submitError.response?.data?.message ||
+          "Erreur lors de la création du lien de partage."
+        : "Erreur lors de la création du lien de partage.";
+
+      setError(message);
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div style={styles.page}>
-      <button style={styles.backBtn} onClick={() => navigate("/liens-partage")}>
+    <div style={pageStyle}>
+      <button
+        type="button"
+        style={backButtonStyle}
+        onClick={() => navigate("/liens-partage")}
+      >
         ← Retour à la liste
       </button>
 
-      <h2 style={styles.title}>Nouveau lien de partage</h2>
+      <h2 style={titleStyle}>Nouveau lien de partage</h2>
 
-      {error && <div style={styles.alert}>{error}</div>}
+      {error && <div style={alertStyle}>{error}</div>}
 
-      <div style={styles.card}>
-        <div style={styles.field}>
-          <label style={styles.label}>Token <span style={{ ...styles.hint, marginTop: 0 }}>(optionnel)</span></label>
-          <input
-            style={styles.input}
-            type="text"
-            name="token"
-            value={form.token ?? ""}
-            onChange={handleChange}
-            placeholder="Laissez vide pour auto-génération"
-          />
-          <p style={styles.hint}>Si non renseigné, le token sera généré automatiquement.</p>
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>
-            Date d'expiration <span style={styles.required}>*</span>
+      <form onSubmit={handleSubmit} style={cardStyle}>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            Date d'expiration <span style={requiredStyle}>*</span>
           </label>
+
           <input
-            style={styles.input}
+            style={inputStyle}
             type="datetime-local"
             name="dateExpiration"
-            value={form.dateExpiration ?? ""}
-            onChange={handleChange}
+            value={form.dateExpiration}
+            onChange={updateField}
           />
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label}>Nombre d'accès maximum</label>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Nombre d'accès maximum</label>
+
           <input
-            style={styles.input}
+            style={inputStyle}
             type="number"
             name="nombreAccesMax"
             min={1}
-            value={form.nombreAccesMax ?? ""}
-            onChange={handleChange}
+            value={form.nombreAccesMax}
+            onChange={updateField}
           />
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label}>
-            Document ID <span style={styles.required}>*</span>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            Document ID <span style={requiredStyle}>*</span>
           </label>
+
           <input
-            style={styles.input}
+            style={inputStyle}
             type="number"
             name="documentId"
-            value={form.documentId ?? ""}
-            onChange={handleChange}
+            min={1}
+            value={form.documentId}
+            onChange={updateField}
           />
+
+          <p style={hintStyle}>
+            Le lien sera généré automatiquement pour ce document.
+          </p>
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label}>Créé par <span style={{ ...styles.hint, marginTop: 0 }}>(User ID)</span></label>
-          <input
-            style={styles.input}
-            type="number"
-            name="creeParId"
-            value={form.creeParId ?? ""}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={styles.switchRow}>
-          <input
-            type="checkbox"
-            id="actif"
-            name="actif"
-            checked={form.actif ?? true}
-            onChange={handleChange}
-            style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--accent)" }}
-          />
-          <label htmlFor="actif" style={styles.switchLabel}>Actif</label>
-        </div>
-
-        <div style={styles.actions}>
+        <div style={actionsStyle}>
           <button
-            style={{ ...styles.btnPrimary, opacity: submitting ? 0.7 : 1 }}
-            onClick={handleSubmit}
-            disabled={submitting}
+            type="submit"
+            style={{
+              ...primaryButtonStyle,
+              opacity: isSubmitting ? 0.7 : 1,
+              cursor: isSubmitting ? "not-allowed" : "pointer",
+            }}
+            disabled={isSubmitting}
           >
-            {submitting ? "Création..." : "Créer"}
+            {isSubmitting ? "Création..." : "Créer"}
           </button>
-          <button style={styles.btnOutline} onClick={() => navigate("/liens-partage")}>
+
+          <button
+            type="button"
+            style={outlineButtonStyle}
+            onClick={() => navigate("/liens-partage")}
+            disabled={isSubmitting}
+          >
             Annuler
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
+}
+
+const pageStyle: CSSProperties = {
+  padding: "32px 40px",
+  textAlign: "left",
+  maxWidth: 560,
 };
 
-export default LienPartageFormPage;
+const backButtonStyle: CSSProperties = {
+  background: "transparent",
+  border: "none",
+  color: "var(--text)",
+  fontSize: 14,
+  cursor: "pointer",
+  padding: "0 0 16px 0",
+  fontFamily: "var(--sans)",
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: 24,
+  fontWeight: 500,
+  color: "var(--text-h)",
+  margin: "0 0 24px 0",
+};
+
+const alertStyle: CSSProperties = {
+  border: "1px solid #fca5a5",
+  background: "#fef2f2",
+  color: "#dc2626",
+  borderRadius: 8,
+  padding: "10px 16px",
+  fontSize: 14,
+  marginBottom: 20,
+};
+
+const cardStyle: CSSProperties = {
+  border: "1px solid var(--border)",
+  borderRadius: 12,
+  padding: 24,
+};
+
+const fieldStyle: CSSProperties = {
+  marginBottom: 20,
+};
+
+const labelStyle: CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "var(--text-h)",
+  marginBottom: 6,
+};
+
+const hintStyle: CSSProperties = {
+  fontSize: 12,
+  color: "var(--text)",
+  marginTop: 4,
+};
+
+const inputStyle: CSSProperties = {
+  width: "100%",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  padding: "8px 12px",
+  fontSize: 14,
+  color: "var(--text-h)",
+  background: "var(--bg)",
+  fontFamily: "var(--sans)",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const requiredStyle: CSSProperties = {
+  color: "#dc2626",
+  marginLeft: 3,
+};
+
+const actionsStyle: CSSProperties = {
+  display: "flex",
+  gap: 10,
+  marginTop: 4,
+};
+
+const primaryButtonStyle: CSSProperties = {
+  background: "var(--accent)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  padding: "9px 24px",
+  fontSize: 14,
+  cursor: "pointer",
+  fontFamily: "var(--sans)",
+  fontWeight: 500,
+};
+
+const outlineButtonStyle: CSSProperties = {
+  background: "transparent",
+  color: "var(--text)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  padding: "9px 24px",
+  fontSize: 14,
+  cursor: "pointer",
+  fontFamily: "var(--sans)",
+};

@@ -1,227 +1,380 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { assignRole } from "../api/userAssociationRoleService";
 import { getUsers } from "../api/userService";
 import { getAssociations } from "../api/associationService";
 import { roleService } from "../api/roleService";
+import type { AssignUserAssociationRoleRequest } from "../types/userAssociationRole";
+import type { UserDto } from "../types/user";
+import type { Association } from "../types/association";
+import type { RoleDto } from "../types/role";
 
-const UserAssociationRoleFormPage = () => {
-  const [form, setForm] = useState({
-    userId: "",
-    associationId: "",
-    roleId: "",
-  });
+interface FormState {
+  userId: string;
+  associationId: string;
+  roleId: string;
+}
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [associations, setAssociations] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+const initialFormState: FormState = {
+  userId: "",
+  associationId: "",
+  roleId: "",
+};
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const usersData = await getUsers({}, 0, 100);
-        const assocData = await getAssociations(0, 100);
-        const rolesData = await roleService.getAll({ page: 0, size: 100 });
+export default function UserAssociationRoleFormPage() {
+  const navigate = useNavigate();
 
-        console.log("USERS:", usersData);
+  const [form, setForm] = useState<FormState>(initialFormState);
+  const [users, setUsers] = useState<UserDto[]>([]);
+  const [associations, setAssociations] = useState<Association[]>([]);
+  const [roles, setRoles] = useState<RoleDto[]>([]);
 
-        setUsers(usersData?.content || usersData || []);
-        setAssociations(assocData?.content || assocData || []);
-        setRoles(rolesData?.content || rolesData || []);
-      } catch (error) {
-        console.error("❌ Erreur chargement données", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    loadData();
+  const updateField = <K extends keyof FormState>(
+    field: K,
+    value: FormState[K]
+  ) => {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  };
+
+  const loadReferenceData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const [usersResponse, associationsResponse, rolesResponse] =
+        await Promise.all([
+          getUsers({}, 0, 1000, "lastName,asc"),
+          getAssociations({}, 0, 1000),
+          roleService.getRoles({
+            page: 0,
+            size: 1000,
+            sort: "name,asc",
+          }),
+        ]);
+
+      setUsers(usersResponse.content ?? []);
+      setAssociations(associationsResponse.content ?? []);
+      setRoles(rolesResponse.content ?? []);
+    } catch (loadError) {
+      console.error("Failed to load role assignment references", loadError);
+      setError("Erreur lors du chargement des utilisateurs, associations ou rôles.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
+  useEffect(() => {
+    loadReferenceData();
+  }, [loadReferenceData]);
 
-    if (!form.userId || !form.associationId || !form.roleId) {
-      alert("⚠️ Veuillez remplir tous les champs");
+  const selectedUser = useMemo(() => {
+    if (!form.userId) return null;
+    return users.find((user) => user.id === Number(form.userId)) ?? null;
+  }, [form.userId, users]);
+
+  const selectedAssociation = useMemo(() => {
+    if (!form.associationId) return null;
+    return (
+      associations.find(
+        (association) => association.id === Number(form.associationId)
+      ) ?? null
+    );
+  }, [associations, form.associationId]);
+
+  const selectedRole = useMemo(() => {
+    if (!form.roleId) return null;
+    return roles.find((role) => role.id === Number(form.roleId)) ?? null;
+  }, [form.roleId, roles]);
+
+  const isSubmitDisabled =
+    isSubmitting || !form.userId || !form.associationId || !form.roleId;
+
+  const validateForm = (): string | null => {
+    if (!form.userId) return "Veuillez sélectionner un utilisateur.";
+    if (!form.associationId) return "Veuillez sélectionner une association.";
+    if (!form.roleId) return "Veuillez sélectionner un rôle.";
+
+    return null;
+  };
+
+  const buildPayload = (): AssignUserAssociationRoleRequest => ({
+    userId: Number(form.userId),
+    associationId: Number(form.associationId),
+    roleId: Number(form.roleId),
+  });
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     try {
-      await assignRole({
-        userId: Number(form.userId),
-        associationId: Number(form.associationId),
-        roleId: Number(form.roleId),
-      });
+      setIsSubmitting(true);
+      setError(null);
 
-      alert("✅ Rôle assigné avec succès !");
+      await assignRole(buildPayload());
 
-      setForm({
-        userId: "",
-        associationId: "",
-        roleId: "",
-      });
-    } catch (error) {
-      console.error(error);
-      alert("❌ Erreur lors de l’assignation");
+      navigate("/user-association-roles");
+    } catch (submitError) {
+      console.error("Failed to assign role", submitError);
+
+      const message = axios.isAxiosError(submitError)
+        ? submitError.response?.data?.message ??
+          "Erreur lors de l'assignation du rôle."
+        : "Erreur lors de l'assignation du rôle.";
+
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (loading) return <p style={{ padding: 20 }}>Chargement...</p>;
+  if (isLoading) {
+    return <div style={styles.message}>Chargement...</div>;
+  }
 
   return (
-    <div style={styles.container}>
+    <div style={styles.page}>
+      <button
+        type="button"
+        style={styles.backButton}
+        onClick={() => navigate("/user-association-roles")}
+      >
+        ← Retour aux affectations
+      </button>
+
       <div style={styles.wrapper}>
-        <h2 style={styles.title}>Assign Role</h2>
+        <h2 style={styles.title}>Assigner un rôle</h2>
+
+        {error && <div style={styles.errorBox}>{error}</div>}
 
         <form onSubmit={handleSubmit} style={styles.card}>
-
-          {/* USER */}
           <div style={styles.field}>
-            <label style={styles.label}>User</label>
+            <label style={styles.label}>Utilisateur *</label>
 
             <select
               style={styles.select}
               value={form.userId}
-              onChange={(e) =>
-                setForm({ ...form, userId: e.target.value })
-              }
+              onChange={(event) => updateField("userId", event.target.value)}
+              disabled={isSubmitting}
             >
-              <option value="">-- Select User --</option>
+              <option value="">-- Sélectionner un utilisateur --</option>
 
               {users.length === 0 ? (
-                <option disabled>⚠️ Aucun utilisateur</option>
+                <option disabled>Aucun utilisateur disponible</option>
               ) : (
-                users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {(u.firstName || "") + " " + (u.lastName || u.nom || "")}
-                    {" - "}
-                    {u.email || ""}
+                users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName} — {user.email}
                   </option>
                 ))
               )}
             </select>
           </div>
 
-          {/* ASSOCIATION */}
           <div style={styles.field}>
-            <label style={styles.label}>Association</label>
+            <label style={styles.label}>Association *</label>
 
             <select
               style={styles.select}
               value={form.associationId}
-              onChange={(e) =>
-                setForm({ ...form, associationId: e.target.value })
+              onChange={(event) =>
+                updateField("associationId", event.target.value)
               }
+              disabled={isSubmitting}
             >
-              <option value="">-- Select Association --</option>
+              <option value="">-- Sélectionner une association --</option>
 
-              {associations.length === 0 && (
-                <option disabled>⚠️ Aucune association</option>
+              {associations.length === 0 ? (
+                <option disabled>Aucune association disponible</option>
+              ) : (
+                associations.map((association) => (
+                  <option key={association.id} value={association.id}>
+                    {association.name}
+                  </option>
+                ))
               )}
-
-              {associations.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
             </select>
           </div>
 
-          {/* ROLE */}
           <div style={styles.field}>
-            <label style={styles.label}>Role</label>
+            <label style={styles.label}>Rôle *</label>
 
             <select
               style={styles.select}
               value={form.roleId}
-              onChange={(e) =>
-                setForm({ ...form, roleId: e.target.value })
-              }
+              onChange={(event) => updateField("roleId", event.target.value)}
+              disabled={isSubmitting}
             >
-              <option value="">-- Select Role --</option>
+              <option value="">-- Sélectionner un rôle --</option>
 
-              {roles.length === 0 && (
-                <option disabled>⚠️ Aucun rôle</option>
+              {roles.length === 0 ? (
+                <option disabled>Aucun rôle disponible</option>
+              ) : (
+                roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))
               )}
-
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
             </select>
           </div>
 
-          <button
-            type="submit"
-            style={{
-              ...styles.button,
-              opacity:
-                !form.userId || !form.associationId || !form.roleId ? 0.6 : 1,
-              cursor:
-                !form.userId || !form.associationId || !form.roleId
-                  ? "not-allowed"
-                  : "pointer",
-            }}
-            disabled={!form.userId || !form.associationId || !form.roleId}
-          >
-            Assign Role
-          </button>
+          {selectedUser && selectedAssociation && selectedRole && (
+            <div style={styles.summaryBox}>
+              <strong>Résumé :</strong>
+              <br />
+              {selectedUser.firstName} {selectedUser.lastName} aura le rôle{" "}
+              <strong>{selectedRole.name}</strong> dans{" "}
+              <strong>{selectedAssociation.name}</strong>.
+            </div>
+          )}
 
+          <div style={styles.actions}>
+            <button
+              type="button"
+              style={styles.cancelButton}
+              onClick={() => navigate("/user-association-roles")}
+              disabled={isSubmitting}
+            >
+              Annuler
+            </button>
+
+            <button
+              type="submit"
+              style={{
+                ...styles.submitButton,
+                opacity: isSubmitDisabled ? 0.6 : 1,
+                cursor: isSubmitDisabled ? "not-allowed" : "pointer",
+              }}
+              disabled={isSubmitDisabled}
+            >
+              {isSubmitting ? "Assignation..." : "Assigner le rôle"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
   );
-};
+}
 
-export default UserAssociationRoleFormPage;
-
-const styles = {
-  container: {
+const styles: Record<string, CSSProperties> = {
+  page: {
     minHeight: "100vh",
     backgroundColor: "#f5f7fb",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
+    padding: "32px 20px",
+    fontFamily: "system-ui, sans-serif",
+  },
+  message: {
+    textAlign: "center",
+    padding: 64,
+    color: "#6b7280",
+  },
+  backButton: {
+    background: "transparent",
+    border: "1px solid #d1d5db",
+    color: "#374151",
+    padding: "8px 14px",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontSize: 14,
+    marginBottom: 24,
   },
   wrapper: {
     width: "100%",
-    maxWidth: "500px",
+    maxWidth: 520,
+    margin: "0 auto",
   },
   title: {
-    fontSize: "28px",
-    fontWeight: "bold",
-    marginBottom: "20px",
-    textAlign: "center" as const,
+    fontSize: 28,
+    fontWeight: 700,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#111827",
   },
   card: {
     background: "#fff",
-    padding: "30px",
-    borderRadius: "16px",
+    padding: 30,
+    borderRadius: 16,
     boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
     display: "flex",
-    flexDirection: "column" as const,
-    gap: "18px",
+    flexDirection: "column",
+    gap: 18,
   },
   field: {
     display: "flex",
-    flexDirection: "column" as const,
+    flexDirection: "column",
   },
   label: {
-    marginBottom: "6px",
+    marginBottom: 6,
     fontWeight: 600,
     color: "#374151",
+    fontSize: 14,
   },
   select: {
-    padding: "12px",
-    borderRadius: "10px",
+    padding: 12,
+    borderRadius: 10,
     border: "1px solid #d1d5db",
-    fontSize: "14px",
+    fontSize: 14,
+    background: "#fff",
+    color: "#111827",
   },
-  button: {
-    marginTop: "10px",
-    padding: "14px",
-    borderRadius: "10px",
+  summaryBox: {
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    color: "#1e3a8a",
+    borderRadius: 10,
+    padding: "12px 14px",
+    fontSize: 14,
+    lineHeight: 1.6,
+  },
+  errorBox: {
+    background: "#fef2f2",
+    color: "#dc2626",
+    border: "1px solid #fecaca",
+    borderRadius: 10,
+    padding: "10px 14px",
+    marginBottom: 16,
+    fontSize: 14,
+  },
+  actions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 10,
+  },
+  cancelButton: {
+    padding: "12px 18px",
+    borderRadius: 10,
+    border: "1px solid #d1d5db",
+    background: "#fff",
+    color: "#374151",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+  submitButton: {
+    padding: "12px 18px",
+    borderRadius: 10,
     border: "none",
     backgroundColor: "#2563eb",
     color: "#fff",

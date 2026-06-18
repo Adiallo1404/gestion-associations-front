@@ -2,9 +2,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAssociations, deleteAssociation } from '../api/associationService';
 import type { Association } from '../types/association';
+import { formatDate } from '../utils/formatDate';
 import ConfirmModal from '../components/ConfirmModal';
 import { useWindowSize } from '../hooks/useWindowSize';
 import Breadcrumb from '../components/Breadcrumb';
+
+// Upper bound for client-side search. For larger datasets, replace this
+// with server-side pagination + the `name`/`city` filters exposed by
+// GET /v1/associations.
+const MAX_PAGE_SIZE = 1000;
 
 export default function AssociationListPage() {
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -14,14 +20,16 @@ export default function AssociationListPage() {
   const navigate = useNavigate();
   const { isMobile, isTablet } = useWindowSize();
 
-  const [modal, setModal] = useState<{ isOpen: boolean; id: number | null; name: string }>
-    ({ isOpen: false, id: null, name: '' });
+  const [modal, setModal] = useState<{ isOpen: boolean; id: number | null; name: string }>(
+    { isOpen: false, id: null, name: '' }
+  );
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await getAssociations(0, 1000);
-      setAssociations(data.content || []);
+      setError(null);
+      const data = await getAssociations({}, 0, MAX_PAGE_SIZE);
+      setAssociations(data.content);
     } catch {
       setError('Erreur lors du chargement des associations');
     } finally {
@@ -32,8 +40,9 @@ export default function AssociationListPage() {
   useEffect(() => { fetchData(); }, []);
 
   const handleDeleteClick = (id: number, name: string) => setModal({ isOpen: true, id, name });
+
   const handleConfirmDelete = async () => {
-    if (!modal.id) return;
+    if (modal.id === null) return;
     try {
       await deleteAssociation(modal.id);
       setModal({ isOpen: false, id: null, name: '' });
@@ -43,21 +52,16 @@ export default function AssociationListPage() {
       setModal({ isOpen: false, id: null, name: '' });
     }
   };
+
   const handleCancelDelete = () => setModal({ isOpen: false, id: null, name: '' });
 
-  const filtered = associations.filter(a =>
+  const filtered = associations.filter((a) =>
     a.name?.toLowerCase().includes(search.toLowerCase()) ||
     a.city?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatDate = (raw: string) => {
-    if (!raw) return '—';
-    const d = new Date(raw);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
   if (loading) return <p style={st.message}>Chargement...</p>;
-  if (error)   return <p style={{ ...st.message, color: '#A32D2D' }}>{error}</p>;
+  if (error) return <p style={{ ...st.message, color: '#A32D2D' }}>{error}</p>;
 
   return (
     <div style={{ ...st.page, padding: isMobile ? '1rem' : '2rem 1.5rem' }}>
@@ -72,10 +76,8 @@ export default function AssociationListPage() {
         onCancel={handleCancelDelete}
       />
 
-      {/* ✅ BREADCRUMB remplace le bouton "← Retour" */}
       <Breadcrumb />
 
-      {/* HEADER */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -92,7 +94,6 @@ export default function AssociationListPage() {
         </button>
       </div>
 
-      {/* TOOLBAR */}
       <div style={st.toolbar}>
         <input
           type="text"
@@ -113,15 +114,15 @@ export default function AssociationListPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: '#1a1a1a' }}>{assoc.name}</div>
-                  <span style={st.cityBadge}>{assoc.city}</span>
+                  {assoc.city && <span style={st.cityBadge}>{assoc.city}</span>}
                 </div>
                 <span style={st.idBadge}>{assoc.id}</span>
               </div>
-              <div style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>{formatDate(assoc.dateCreation ?? '')}</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>{formatDate(assoc.dateCreation)}</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button style={{ ...st.btnVoir, flex: 1, justifyContent: 'center' }} onClick={() => navigate(`/associations/${assoc.id}`)}>Voir</button>
                 <button style={{ ...st.btnEdit, flex: 1, justifyContent: 'center' }} onClick={() => navigate(`/associations/${assoc.id}/edit`)}>Modifier</button>
-                <button style={{ ...st.btnDel, flex: 1, justifyContent: 'center' }} onClick={() => handleDeleteClick(assoc.id, assoc.name ?? '')}>Supprimer</button>
+                <button style={{ ...st.btnDel, flex: 1, justifyContent: 'center' }} onClick={() => handleDeleteClick(assoc.id, assoc.name)}>Supprimer</button>
               </div>
             </div>
           ))}
@@ -148,8 +149,8 @@ export default function AssociationListPage() {
                 >
                   <td style={st.td}><span style={st.idBadge}>{assoc.id}</span></td>
                   <td style={{ ...st.td, fontWeight: 500 }}>{assoc.name}</td>
-                  <td style={st.td}><span style={st.cityBadge}>{assoc.city}</span></td>
-                  {!isTablet && <td style={st.td}><span style={st.dateText}>{formatDate(assoc.dateCreation ?? '')}</span></td>}
+                  <td style={st.td}>{assoc.city && <span style={st.cityBadge}>{assoc.city}</span>}</td>
+                  {!isTablet && <td style={st.td}><span style={st.dateText}>{formatDate(assoc.dateCreation)}</span></td>}
                   <td style={st.td}>
                     <div style={st.actions}>
                       <button style={st.btnVoir} onClick={() => navigate(`/associations/${assoc.id}`)}>
@@ -165,7 +166,7 @@ export default function AssociationListPage() {
                         </svg>
                         {!isTablet && 'Modifier'}
                       </button>
-                      <button style={st.btnDel} onClick={() => handleDeleteClick(assoc.id, assoc.name ?? '')}>
+                      <button style={st.btnDel} onClick={() => handleDeleteClick(assoc.id, assoc.name)}>
                         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                           <polyline points="2,4 11,4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                           <path d="M5 4V3h3v1M4 4l1 7h4l1-7" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />

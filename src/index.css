@@ -50,7 +50,7 @@
   }
 }
 
-/* ✅ FIX SCROLL : html et body sans contraintes */
+/* SCROLL FIX: html and body without constraints */
 html,
 body {
   margin: 0;
@@ -62,14 +62,14 @@ body {
   margin: 0;
 }
 
-/* ✅ FIX SCROLL : #root prend toute la largeur pour le dashboard,
-   les pages publiques (landing, about…) gardent leur centrage via leurs propres conteneurs */
+/* SCROLL FIX: #root takes full width for the dashboard,
+   public pages (landing, about…) keep their centering via their own containers */
 #root {
-  width: 100%;          /* ← était 1126px, bloquait le dashboard plein écran */
+  width: 100%;          /* was 1126px, blocked the full-screen dashboard */
   max-width: 100%;
-  margin: 0;            /* ← plus de centrage global, chaque page gère le sien */
-  text-align: left;     /* ← était center, mauvais pour le dashboard */
-  border-inline: none;  /* ← supprimé, inutile en plein écran */
+  margin: 0;            /* no more global centering, each page handles its own */
+  text-align: left;     /* was center, wrong for the dashboard */
+  border-inline: none;  /* removed, useless in full-screen */
   min-height: 100svh;
   display: flex;
   flex-direction: column;

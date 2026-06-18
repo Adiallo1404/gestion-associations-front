@@ -1,9 +1,19 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { notificationService } from "../api/notificationService";
-import type { NotificationDto } from "../types/notification";
+import type {
+  NotificationDto,
+  StatutNotification,
+  TypeNotification,
+} from "../types/notification";
 
-const TYPE_LABELS: Record<string, string> = {
+const TYPE_LABELS: Record<TypeNotification, string> = {
   RELANCE_COTISATION: "Relance cotisation",
   COTISATION_PAYEE: "Cotisation payée",
   NOUVEAU_MEMBRE: "Nouveau membre",
@@ -13,165 +23,386 @@ const TYPE_LABELS: Record<string, string> = {
   INFORMATION_GENERALE: "Information générale",
 };
 
+interface DetailRow {
+  label: string;
+  value: string | number;
+}
+
 export default function NotificationDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [notif, setNotif] = useState<NotificationDto | null>(null);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const [notification, setNotification] = useState<NotificationDto | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchNotif = async () => {
-      try {
-        const data = await notificationService.getById(Number(id));
-        setNotif(data);
-        // ✅ FIX : markAsRead dans un try/catch séparé
-        // pour ne pas bloquer l'affichage si ça échoue
-        if (data.statut === "NON_LUE") {
-          try {
-            await notificationService.markAsRead(Number(id));
-            setNotif({ ...data, statut: "LUE" });
-          } catch {
-            console.warn("markAsRead a échoué — notification affichée quand même");
-          }
+  const notificationId = Number(id);
+
+  const fetchNotification = useCallback(async () => {
+    if (!id || Number.isNaN(notificationId)) {
+      setError("Identifiant notification invalide.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data = await notificationService.getNotificationById(
+        notificationId
+      );
+
+      if (data.statut === "NON_LUE") {
+        try {
+          const updated = await notificationService.markNotificationAsRead(
+            notificationId
+          );
+
+          setNotification(updated);
+          return;
+        } catch (readError) {
+          console.warn("Failed to mark notification as read", readError);
         }
-      } catch {
-        setError("Notification introuvable.");
-      } finally {
-        setLoading(false);
       }
-    };
-    if (id) fetchNotif();
-  }, [id]);
+
+      setNotification(data);
+    } catch (fetchError) {
+      console.error("Failed to load notification", fetchError);
+      setError("Notification introuvable.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id, notificationId]);
+
+  useEffect(() => {
+    fetchNotification();
+  }, [fetchNotification]);
 
   const handleDelete = async () => {
-    if (!window.confirm("Supprimer cette notification ?")) return;
+    if (!notification?.id) return;
+
+    const confirmed = window.confirm("Supprimer cette notification ?");
+    if (!confirmed) return;
+
     try {
-      await notificationService.delete(Number(id));
-      // ✅ FIX : window.location.href au lieu de navigate
-      window.location.href = "/notifications";
-    } catch {
+      setIsDeleting(true);
+      await notificationService.deleteNotification(notification.id);
+      navigate("/notifications");
+    } catch (deleteError) {
+      console.error("Failed to delete notification", deleteError);
       setError("Erreur lors de la suppression.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  if (loading) return (
-    <div style={{ textAlign: "center", padding: 64, color: "#6b7280" }}>
-      Chargement...
-    </div>
-  );
+  const rows = useMemo<DetailRow[]>(() => {
+    if (!notification) return [];
 
-  if (error) return (
-    <div style={{ maxWidth: 600, margin: "40px auto", padding: 16 }}>
-      <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px" }}>
-        {error}
+    return [
+      {
+        label: "Type",
+        value:
+          TYPE_LABELS[notification.typeNotification] ||
+          notification.typeNotification,
+      },
+      {
+        label: "Statut",
+        value: notification.statut,
+      },
+      {
+        label: "Association",
+        value: notification.associationId,
+      },
+      {
+        label: "Destinataire",
+        value: notification.destinataireId,
+      },
+      {
+        label: "Membre",
+        value: notification.memberId ?? "—",
+      },
+      {
+        label: "Lien action",
+        value: notification.lienAction || "—",
+      },
+      {
+        label: "Email envoyé",
+        value: notification.envoyeeParEmail ? "Oui" : "Non",
+      },
+      {
+        label: "Date lecture",
+        value: notification.dateLecture
+          ? new Date(notification.dateLecture).toLocaleString("fr-FR")
+          : "—",
+      },
+      {
+        label: "Expiration",
+        value: notification.dateExpiration
+          ? new Date(notification.dateExpiration).toLocaleString("fr-FR")
+          : "—",
+      },
+      {
+        label: "Date création",
+        value: notification.dateCreation
+          ? new Date(notification.dateCreation).toLocaleString("fr-FR")
+          : "—",
+      },
+    ];
+  }, [notification]);
+
+  if (isLoading) {
+    return <div style={loadingStyle}>Chargement...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={errorContainerStyle}>
+        <div style={errorBoxStyle}>{error}</div>
+
+        <div style={centerStyle}>
+          <button
+            onClick={() => navigate("/notifications")}
+            style={backButtonStyle}
+          >
+            ← Retour aux notifications
+          </button>
+        </div>
       </div>
-      <div style={{ textAlign: "center", marginTop: 16 }}>
-        <button
-          onClick={() => window.location.href = "/notifications"}
-          style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
-          ← Retour aux notifications
-        </button>
-      </div>
-    </div>
-  );
+    );
+  }
 
-  if (!notif) return null;
-
-  const rows = [
-    { label: "Type",         value: TYPE_LABELS[notif.typeNotification] || notif.typeNotification },
-    { label: "Statut",       value: notif.statut },
-    { label: "Association",  value: notif.associationId ?? "—" },
-    { label: "Destinataire", value: notif.destinataireId ?? "—" },
-    { label: "Membre",       value: notif.memberId ?? "—" },
-    { label: "Lien action",  value: notif.lienAction || "—" },
-    { label: "Email envoyé", value: notif.envoyeeParEmail ? "Oui" : "Non" },
-    { label: "Date lecture",
-      value: notif.dateLecture
-        ? new Date(notif.dateLecture).toLocaleString("fr-FR")
-        : "—" },
-    { label: "Expiration",
-      value: notif.dateExpiration
-        ? new Date(notif.dateExpiration).toLocaleString("fr-FR")
-        : "—" },
-    { label: "Date création",
-      value: notif.dateCreation
-        ? new Date(notif.dateCreation).toLocaleString("fr-FR")
-        : "—" },
-  ];
+  if (!notification) {
+    return null;
+  }
 
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 16px" }}>
+    <div style={pageStyle}>
+      <div style={headerStyle}>
+        <h2 style={titleStyle}>🔔 {notification.titre}</h2>
 
-      {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>🔔 {notif.titre}</h2>
-        {/* ✅ FIX : window.location.href au lieu de navigate */}
         <button
-          onClick={() => window.location.href = "/notifications"}
-          style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
+          onClick={() => navigate("/notifications")}
+          style={backButtonStyle}
+        >
           ← Retour
         </button>
       </div>
 
-      {/* CARTE DÉTAIL */}
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ padding: 24 }}>
-
-          {/* STATUT BADGE en haut */}
-          <div style={{ marginBottom: 16 }}>
-            <span style={{
-              background: notif.statut === "NON_LUE" ? "#eff6ff"
-                        : notif.statut === "LUE"     ? "#f0fdf4"
-                        : "#f9fafb",
-              color:     notif.statut === "NON_LUE" ? "#1d4ed8"
-                        : notif.statut === "LUE"     ? "#15803d"
-                        : "#6b7280",
-              border: `1px solid ${
-                notif.statut === "NON_LUE" ? "#bfdbfe"
-                : notif.statut === "LUE"   ? "#bbf7d0"
-                : "#e5e7eb"}`,
-              padding: "4px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600
-            }}>
-              {notif.statut === "NON_LUE" ? "● Non lue"
-               : notif.statut === "LUE"   ? "✓ Lue"
-               : "Archivée"}
+      <div style={cardStyle}>
+        <div style={cardBodyStyle}>
+          <div style={statusWrapperStyle}>
+            <span style={statusBadgeStyle(notification.statut)}>
+              {getStatusLabel(notification.statut)}
             </span>
           </div>
 
-          {/* LIGNES */}
           {rows.map(({ label, value }) => (
-            <div key={label} style={{ display: "flex", borderBottom: "1px solid #f3f4f6", padding: "12px 0" }}>
-              <span style={{ width: 160, color: "#6b7280", fontSize: 14, fontWeight: 500, flexShrink: 0 }}>
-                {label}
-              </span>
-              <span style={{ fontSize: 14, color: "#111827" }}>{String(value)}</span>
+            <div key={label} style={rowStyle}>
+              <span style={rowLabelStyle}>{label}</span>
+              <span style={rowValueStyle}>{String(value)}</span>
             </div>
           ))}
 
-          {/* MESSAGE */}
-          <div style={{ display: "flex", paddingTop: 12 }}>
-            <span style={{ width: 160, color: "#6b7280", fontSize: 14, fontWeight: 500, flexShrink: 0 }}>
-              Message
-            </span>
-            <div style={{
-              flex: 1, background: "#f9fafb", border: "1px solid #e5e7eb",
-              borderRadius: 8, padding: "12px 16px", fontSize: 14,
-              lineHeight: 1.6, whiteSpace: "pre-wrap", minHeight: 80
-            }}>
-              {notif.message || "Aucun message"}
+          <div style={messageRowStyle}>
+            <span style={rowLabelStyle}>Message</span>
+
+            <div style={messageBoxStyle}>
+              {notification.message || "Aucun message"}
             </div>
           </div>
         </div>
 
-        {/* FOOTER BOUTON SUPPRIMER */}
-        <div style={{ padding: "16px 24px", background: "#f9fafb", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end" }}>
+        <div style={footerStyle}>
           <button
             onClick={handleDelete}
-            style={{ padding: "10px 20px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
-            🗑️ Supprimer
+            disabled={isDeleting}
+            style={{
+              ...deleteButtonStyle,
+              opacity: isDeleting ? 0.7 : 1,
+              cursor: isDeleting ? "not-allowed" : "pointer",
+            }}
+          >
+            {isDeleting ? "Suppression..." : "🗑️ Supprimer"}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+function getStatusLabel(statut: StatutNotification): string {
+  switch (statut) {
+    case "NON_LUE":
+      return "● Non lue";
+    case "LUE":
+      return "✓ Lue";
+    case "ARCHIVEE":
+      return "Archivée";
+    default:
+      return statut;
+  }
+}
+
+function statusBadgeStyle(statut: StatutNotification): CSSProperties {
+  if (statut === "NON_LUE") {
+    return {
+      background: "#eff6ff",
+      color: "#1d4ed8",
+      border: "1px solid #bfdbfe",
+      padding: "4px 14px",
+      borderRadius: 20,
+      fontSize: 13,
+      fontWeight: 600,
+    };
+  }
+
+  if (statut === "LUE") {
+    return {
+      background: "#f0fdf4",
+      color: "#15803d",
+      border: "1px solid #bbf7d0",
+      padding: "4px 14px",
+      borderRadius: 20,
+      fontSize: 13,
+      fontWeight: 600,
+    };
+  }
+
+  return {
+    background: "#f9fafb",
+    color: "#6b7280",
+    border: "1px solid #e5e7eb",
+    padding: "4px 14px",
+    borderRadius: 20,
+    fontSize: 13,
+    fontWeight: 600,
+  };
+}
+
+const pageStyle: CSSProperties = {
+  maxWidth: 700,
+  margin: "0 auto",
+  padding: "32px 16px",
+};
+
+const loadingStyle: CSSProperties = {
+  textAlign: "center",
+  padding: 64,
+  color: "#6b7280",
+};
+
+const errorContainerStyle: CSSProperties = {
+  maxWidth: 600,
+  margin: "40px auto",
+  padding: 16,
+};
+
+const errorBoxStyle: CSSProperties = {
+  background: "#fef2f2",
+  border: "1px solid #fca5a5",
+  color: "#dc2626",
+  borderRadius: 8,
+  padding: "12px 16px",
+};
+
+const centerStyle: CSSProperties = {
+  textAlign: "center",
+  marginTop: 16,
+};
+
+const headerStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 24,
+  gap: 16,
+};
+
+const titleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 22,
+  fontWeight: 700,
+};
+
+const backButtonStyle: CSSProperties = {
+  padding: "8px 16px",
+  background: "#f3f4f6",
+  border: "1px solid #d1d5db",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontSize: 14,
+};
+
+const cardStyle: CSSProperties = {
+  background: "#fff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 10,
+  overflow: "hidden",
+};
+
+const cardBodyStyle: CSSProperties = {
+  padding: 24,
+};
+
+const statusWrapperStyle: CSSProperties = {
+  marginBottom: 16,
+};
+
+const rowStyle: CSSProperties = {
+  display: "flex",
+  borderBottom: "1px solid #f3f4f6",
+  padding: "12px 0",
+};
+
+const rowLabelStyle: CSSProperties = {
+  width: 160,
+  color: "#6b7280",
+  fontSize: 14,
+  fontWeight: 500,
+  flexShrink: 0,
+};
+
+const rowValueStyle: CSSProperties = {
+  fontSize: 14,
+  color: "#111827",
+};
+
+const messageRowStyle: CSSProperties = {
+  display: "flex",
+  paddingTop: 12,
+};
+
+const messageBoxStyle: CSSProperties = {
+  flex: 1,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+  borderRadius: 8,
+  padding: "12px 16px",
+  fontSize: 14,
+  lineHeight: 1.6,
+  whiteSpace: "pre-wrap",
+  minHeight: 80,
+};
+
+const footerStyle: CSSProperties = {
+  padding: "16px 24px",
+  background: "#f9fafb",
+  borderTop: "1px solid #e5e7eb",
+  display: "flex",
+  justifyContent: "flex-end",
+};
+
+const deleteButtonStyle: CSSProperties = {
+  padding: "10px 20px",
+  background: "#ef4444",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: 14,
+};

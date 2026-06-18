@@ -1,435 +1,643 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  getProjetById,
-  deleteDepense,
-  deletePartenaire,
   addDepense,
   addPartenaire,
+  deleteDepense,
+  deletePartenaire,
+  getProjetById,
 } from "../api/projetService";
-import type { ProjetDto, DepenseProjetDto, PartenaireProjetDto, TypePartenaire } from "../types/projet";
+import type {
+  CreateDepenseProjetRequest,
+  CreatePartenaireProjetRequest,
+  DepenseProjetDto,
+  PartenaireProjetDto,
+  ProjetDto,
+  StatutProjet,
+  TypePartenaire,
+} from "../types/projet";
+import {
+  STATUT_PROJET_LABELS,
+  TYPE_PARTENAIRE_LABELS,
+  TYPE_PARTENAIRE_OPTIONS,
+} from "../types/projet";
 
-const TYPE_PARTENAIRE: { value: TypePartenaire; label: string }[] = [
-  { value: "FINANCIER",      label: "💰 Financier" },
-  { value: "TECHNIQUE",      label: "🔧 Technique" },
-  { value: "INSTITUTIONNEL", label: "🏛️ Institutionnel" },
-  { value: "AUTRE",          label: "🔹 Autre" },
-];
+interface DepenseFormState {
+  libelle: string;
+  montant: string;
+  dateDepense: string;
+  description: string;
+}
 
-const getDeviseSign = (deviseCode?: string): string => {
-  if (!deviseCode) return "€";
-  switch (deviseCode.toUpperCase()) {
-    case "EUR": return "€";
-    case "USD": return "$";
-    case "XOF": case "XAF": return "FCFA";
-    case "GNF": return "GNF";
-    case "MAD": return "MAD";
-    case "DZD": return "DZD";
-    case "TND": return "TND";
-    case "GBP": return "£";
-    case "CHF": return "CHF";
-    default: return deviseCode;
+interface PartenaireFormState {
+  nom: string;
+  type: TypePartenaire;
+  contact: string;
+  description: string;
+}
+
+const initialDepenseForm: DepenseFormState = {
+  libelle: "",
+  montant: "",
+  dateDepense: "",
+  description: "",
+};
+
+const initialPartenaireForm: PartenaireFormState = {
+  nom: "",
+  type: "AUTRE",
+  contact: "",
+  description: "",
+};
+
+const getDeviseSign = (code?: string | null): string => {
+  switch ((code || "EUR").toUpperCase()) {
+    case "EUR":
+      return "€";
+    case "USD":
+      return "$";
+    case "XOF":
+    case "XAF":
+      return "FCFA";
+    case "GNF":
+      return "GNF";
+    case "MAD":
+      return "MAD";
+    case "DZD":
+      return "DZD";
+    case "TND":
+      return "TND";
+    case "GBP":
+      return "£";
+    case "CHF":
+      return "CHF";
+    default:
+      return code || "€";
   }
 };
 
-const getStatutStyle = (statut: string): { background: string; color: string } => {
+const getStatutStyle = (
+  statut: StatutProjet
+): { background: string; color: string } => {
   switch (statut) {
-    case "EN_COURS": return { background: "#e6f4ea", color: "#137333" };
-    case "TERMINE":  return { background: "#e8f0fe", color: "#1a73e8" };
-    case "FUTUR":    return { background: "#fef3c7", color: "#b45309" };
-    default:         return { background: "#f3f4f6", color: "#6b7280" };
+    case "EN_ATTENTE":
+      return { background: "#fef3c7", color: "#b45309" };
+    case "EN_COURS":
+      return { background: "#e6f4ea", color: "#137333" };
+    case "TERMINE":
+      return { background: "#e8f0fe", color: "#1a73e8" };
+    case "ANNULE":
+      return { background: "#fee2e2", color: "#dc2626" };
+    default:
+      return { background: "#f3f4f6", color: "#6b7280" };
   }
 };
 
-// ── Modale générique ──────────────────────────────────────────────────────────
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 12, padding: 28, width: "100%", maxWidth: 480,
-        boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>{title}</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9ca3af", lineHeight: 1 }}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
+const formatDate = (date?: string | null): string => {
+  if (!date) return "—";
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 8,
-  border: "1.5px solid #e5e7eb",
-  fontSize: 14,
-  boxSizing: "border-box",
-  outline: "none",
-  fontFamily: "inherit",
-  color: "#111827",
-  background: "#fff",
+  return new Date(date).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: "#4b5563",
+const formatMoney = (amount: number, sign: string): string => {
+  return `${amount.toLocaleString("fr-FR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })} ${sign}`;
 };
 
-// ── Section card réutilisable ─────────────────────────────────────────────────
-function SectionCard({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div style={{
-      background: "#fff",
-      border: "1px solid #e5e7eb",
-      borderRadius: 12,
-      overflow: "hidden",
-      marginBottom: 20,
-      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-    }}>
-      <div style={{
-        padding: "14px 20px",
-        background: "#fafafa",
-        borderBottom: "1px solid #e5e7eb",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#374151" }}>{title}</h3>
-        {action}
-      </div>
-      <div style={{ padding: 20 }}>{children}</div>
-    </div>
-  );
-}
-
-const ProjetDetailPage = () => {
+export default function ProjetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [projet, setProjet]               = useState<ProjetDto | null>(null);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState<string | null>(null);
-  const [showDepenseModal,    setShowDepenseModal]    = useState(false);
+  const projetId = Number(id);
+
+  const [projet, setProjet] = useState<ProjetDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmittingDepense, setIsSubmittingDepense] = useState(false);
+  const [isSubmittingPartenaire, setIsSubmittingPartenaire] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [showDepenseModal, setShowDepenseModal] = useState(false);
   const [showPartenaireModal, setShowPartenaireModal] = useState(false);
-  const [submitting,          setSubmitting]          = useState(false);
 
-  const [depenseForm, setDepenseForm] = useState<DepenseProjetDto>({
-    libelle: "", montant: 0, dateDepense: "", description: "",
-  });
-  const [partenaireForm, setPartenaireForm] = useState<PartenaireProjetDto>({
-    nom: "", type: "AUTRE", description: "", contact: "",
-  });
+  const [depenseForm, setDepenseForm] =
+    useState<DepenseFormState>(initialDepenseForm);
 
-  const fetchProjet = async () => {
+  const [partenaireForm, setPartenaireForm] =
+    useState<PartenaireFormState>(initialPartenaireForm);
+
+  const loadProjet = useCallback(async () => {
+    if (!id || Number.isNaN(projetId)) {
+      setError("Identifiant projet invalide.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const data = await getProjetById(Number(id));
-      setProjet(data);
+      setIsLoading(true);
       setError(null);
-    } catch {
+
+      const data = await getProjetById(projetId);
+      setProjet(data);
+    } catch (loadError) {
+      console.error("Failed to load project", loadError);
       setError("Projet introuvable ou accès refusé.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  }, [id, projetId]);
+
+  useEffect(() => {
+    loadProjet();
+  }, [loadProjet]);
+
+  const deviseSign = getDeviseSign(projet?.devise);
+
+  const financialSummary = useMemo(() => {
+    const budget = projet?.budget ?? 0;
+    const totalDepenses = projet?.totalDepenses ?? 0;
+    const remaining = budget - totalDepenses;
+    const progress =
+      budget > 0 ? Math.min(Math.round((totalDepenses / budget) * 100), 100) : 0;
+
+    return {
+      budget,
+      totalDepenses,
+      remaining,
+      progress,
+    };
+  }, [projet]);
+
+  const handleAddDepense = async () => {
+    if (!projet?.id) return;
+
+    if (!depenseForm.libelle.trim()) {
+      window.alert("Le libellé est obligatoire.");
+      return;
+    }
+
+    if (!depenseForm.montant || Number(depenseForm.montant) <= 0) {
+      window.alert("Le montant doit être positif.");
+      return;
+    }
+
+    const payload: CreateDepenseProjetRequest = {
+      libelle: depenseForm.libelle.trim(),
+      montant: Number(depenseForm.montant),
+      dateDepense: depenseForm.dateDepense || null,
+      description: depenseForm.description.trim() || null,
+      projetId: projet.id,
+    };
+
+    try {
+      setIsSubmittingDepense(true);
+
+      await addDepense(projet.id, payload);
+
+      setDepenseForm(initialDepenseForm);
+      setShowDepenseModal(false);
+      await loadProjet();
+    } catch (submitError) {
+      console.error("Failed to add expense", submitError);
+      window.alert("Erreur lors de l'ajout de la dépense.");
+    } finally {
+      setIsSubmittingDepense(false);
     }
   };
 
-  useEffect(() => { if (id) fetchProjet(); }, [id]);
+  const handleDeleteDepense = async (depense: DepenseProjetDto) => {
+    if (!depense.id) return;
 
-  const handleSubmitDepense = async () => {
-    if (!depenseForm.libelle)                          { alert("⚠️ Libellé obligatoire"); return; }
-    if (!depenseForm.montant || depenseForm.montant <= 0) { alert("⚠️ Montant obligatoire et positif"); return; }
-    setSubmitting(true);
+    const confirmed = window.confirm(
+      `Supprimer la dépense "${depense.libelle}" ?`
+    );
+
+    if (!confirmed) return;
+
     try {
-      await addDepense(Number(id), depenseForm);
-      setShowDepenseModal(false);
-      setDepenseForm({ libelle: "", montant: 0, dateDepense: "", description: "" });
-      fetchProjet();
-    } catch { alert("❌ Erreur lors de l'ajout de la dépense."); }
-    finally { setSubmitting(false); }
+      await deleteDepense(depense.id);
+      await loadProjet();
+    } catch (deleteError) {
+      console.error("Failed to delete expense", deleteError);
+      window.alert("Erreur lors de la suppression de la dépense.");
+    }
   };
 
-  const handleDeleteDepense = async (depenseId: number) => {
-    if (!window.confirm("Supprimer cette dépense ?")) return;
-    try { await deleteDepense(depenseId); fetchProjet(); }
-    catch { alert("Erreur lors de la suppression."); }
-  };
+  const handleAddPartenaire = async () => {
+    if (!projet?.id) return;
 
-  const handleSubmitPartenaire = async () => {
-    if (!partenaireForm.nom) { alert("⚠️ Nom du partenaire obligatoire"); return; }
-    setSubmitting(true);
+    if (!partenaireForm.nom.trim()) {
+      window.alert("Le nom du partenaire est obligatoire.");
+      return;
+    }
+
+    const payload: CreatePartenaireProjetRequest = {
+      nom: partenaireForm.nom.trim(),
+      type: partenaireForm.type,
+      contact: partenaireForm.contact.trim() || null,
+      description: partenaireForm.description.trim() || null,
+      projetId: projet.id,
+    };
+
     try {
-      await addPartenaire(Number(id), partenaireForm);
+      setIsSubmittingPartenaire(true);
+
+      await addPartenaire(projet.id, payload);
+
+      setPartenaireForm(initialPartenaireForm);
       setShowPartenaireModal(false);
-      setPartenaireForm({ nom: "", type: "AUTRE", description: "", contact: "" });
-      fetchProjet();
-    } catch { alert("❌ Erreur lors de l'ajout du partenaire."); }
-    finally { setSubmitting(false); }
+      await loadProjet();
+    } catch (submitError) {
+      console.error("Failed to add partner", submitError);
+      window.alert("Erreur lors de l'ajout du partenaire.");
+    } finally {
+      setIsSubmittingPartenaire(false);
+    }
   };
 
-  const handleDeletePartenaire = async (partenaireId: number) => {
-    if (!window.confirm("Détacher ce partenaire ?")) return;
-    try { await deletePartenaire(partenaireId); fetchProjet(); }
-    catch { alert("Erreur lors du retrait."); }
+  const handleDeletePartenaire = async (partenaire: PartenaireProjetDto) => {
+    if (!partenaire.id) return;
+
+    const confirmed = window.confirm(
+      `Détacher le partenaire "${partenaire.nom}" ?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deletePartenaire(partenaire.id);
+      await loadProjet();
+    } catch (deleteError) {
+      console.error("Failed to delete partner", deleteError);
+      window.alert("Erreur lors du retrait du partenaire.");
+    }
   };
 
-  if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", color: "#6b7280", fontSize: 15 }}>
-      Chargement du projet...
-    </div>
-  );
+  if (isLoading) {
+    return <div style={styles.loading}>Chargement du projet...</div>;
+  }
 
-  if (error) return (
-    <div style={{ maxWidth: 860, margin: "40px auto", padding: 16 }}>
-      <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px", fontSize: 14 }}>
-        ⚠️ {error}
+  if (error) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.errorBox}>⚠️ {error}</div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/projets")}
+            style={styles.secondaryButton}
+          >
+            ← Retour aux projets
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  if (!projet) return null;
+  if (!projet) {
+    return null;
+  }
 
-  const sign          = getDeviseSign(projet.devise);
-  const budgetGlobal  = projet.budget ?? 0;
-  const totalDepenses = projet.totalDepenses ?? 0;
-  const resteAAllouer = budgetGlobal - totalDepenses;
-  const statutStyle   = getStatutStyle(projet.statut);
-
-  const btnPrimary: React.CSSProperties = {
-    padding: "8px 16px",
-    background: "#4f46e5",
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 600,
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-  };
-
-  const btnSecondary: React.CSSProperties = {
-    padding: "8px 16px",
-    background: "#fff",
-    border: "1.5px solid #e5e7eb",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#374151",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-  };
+  const statutStyle = getStatutStyle(projet.statut);
 
   return (
-    <div style={{ padding: "32px 24px", background: "#f8fafc", minHeight: "100vh" }}>
-      <div style={{ maxWidth: 860, margin: "0 auto" }}>
-
-        {/* ── Modales ── */}
+    <div style={styles.page}>
+      <div style={styles.container}>
         {showDepenseModal && (
-          <Modal title="➕ Nouvelle dépense" onClose={() => setShowDepenseModal(false)}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={labelStyle}>Libellé <span style={{ color: "#ef4444" }}>*</span></label>
-                <input style={{ ...inputStyle, marginTop: 6 }} placeholder="Ex: Achat matériel"
-                  value={depenseForm.libelle} onChange={e => setDepenseForm(p => ({ ...p, libelle: e.target.value }))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Montant ({sign}) <span style={{ color: "#ef4444" }}>*</span></label>
-                <input style={{ ...inputStyle, marginTop: 6 }} type="number" step="0.01" min="0.01" placeholder="0.00"
-                  value={depenseForm.montant || ""}
-                  onChange={e => setDepenseForm(p => ({ ...p, montant: Number(e.target.value) }))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Date de la dépense</label>
-                <input style={{ ...inputStyle, marginTop: 6 }} type="date" value={depenseForm.dateDepense || ""}
-                  onChange={e => setDepenseForm(p => ({ ...p, dateDepense: e.target.value }))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Description</label>
-                <textarea style={{ ...inputStyle, marginTop: 6, resize: "vertical", minHeight: 70 }}
-                  placeholder="Détails optionnels..." value={depenseForm.description || ""}
-                  onChange={e => setDepenseForm(p => ({ ...p, description: e.target.value }))} />
-              </div>
-              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                <button onClick={() => setShowDepenseModal(false)}
-                  style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 500, color: "#374151" }}>
-                  Annuler
-                </button>
-                <button onClick={handleSubmitDepense} disabled={submitting}
-                  style={{ flex: 2, padding: "10px", borderRadius: 8, border: "none", background: submitting ? "#a5b4fc" : "#4f46e5", color: "#fff", cursor: submitting ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 600 }}>
-                  {submitting ? "Enregistrement..." : "💾 Ajouter la dépense"}
-                </button>
-              </div>
+          <Modal
+            title="➕ Nouvelle dépense"
+            onClose={() => setShowDepenseModal(false)}
+          >
+            <div style={styles.modalForm}>
+              <Field label="Libellé" required>
+                <input
+                  style={styles.input}
+                  value={depenseForm.libelle}
+                  placeholder="Ex : Achat matériel"
+                  onChange={(event) =>
+                    setDepenseForm((current) => ({
+                      ...current,
+                      libelle: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label={`Montant (${deviseSign})`} required>
+                <input
+                  style={styles.input}
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={depenseForm.montant}
+                  placeholder="0.00"
+                  onChange={(event) =>
+                    setDepenseForm((current) => ({
+                      ...current,
+                      montant: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Date de dépense">
+                <input
+                  style={styles.input}
+                  type="date"
+                  value={depenseForm.dateDepense}
+                  onChange={(event) =>
+                    setDepenseForm((current) => ({
+                      ...current,
+                      dateDepense: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Description">
+                <textarea
+                  style={styles.textarea}
+                  value={depenseForm.description}
+                  placeholder="Détails optionnels..."
+                  onChange={(event) =>
+                    setDepenseForm((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+
+              <ModalActions
+                onCancel={() => setShowDepenseModal(false)}
+                onConfirm={handleAddDepense}
+                confirmLabel={
+                  isSubmittingDepense ? "Enregistrement..." : "Ajouter la dépense"
+                }
+                disabled={isSubmittingDepense}
+              />
             </div>
           </Modal>
         )}
 
         {showPartenaireModal && (
-          <Modal title="🤝 Associer un partenaire" onClose={() => setShowPartenaireModal(false)}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={labelStyle}>Nom du partenaire <span style={{ color: "#ef4444" }}>*</span></label>
-                <input style={{ ...inputStyle, marginTop: 6 }} placeholder="Ex: ONG Solidarité"
-                  value={partenaireForm.nom} onChange={e => setPartenaireForm(p => ({ ...p, nom: e.target.value }))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Type de partenariat</label>
-                <select style={{ ...inputStyle, marginTop: 6, cursor: "pointer" }} value={partenaireForm.type || "AUTRE"}
-                  onChange={e => setPartenaireForm(p => ({ ...p, type: e.target.value as TypePartenaire }))}>
-                  {TYPE_PARTENAIRE.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          <Modal
+            title="🤝 Associer un partenaire"
+            onClose={() => setShowPartenaireModal(false)}
+          >
+            <div style={styles.modalForm}>
+              <Field label="Nom du partenaire" required>
+                <input
+                  style={styles.input}
+                  value={partenaireForm.nom}
+                  placeholder="Ex : ONG Solidarité"
+                  onChange={(event) =>
+                    setPartenaireForm((current) => ({
+                      ...current,
+                      nom: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Type de partenaire">
+                <select
+                  style={styles.input}
+                  value={partenaireForm.type}
+                  onChange={(event) =>
+                    setPartenaireForm((current) => ({
+                      ...current,
+                      type: event.target.value as TypePartenaire,
+                    }))
+                  }
+                >
+                  {TYPE_PARTENAIRE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {TYPE_PARTENAIRE_LABELS[type]}
+                    </option>
+                  ))}
                 </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Contact</label>
-                <input style={{ ...inputStyle, marginTop: 6 }} placeholder="Email ou téléphone"
-                  value={partenaireForm.contact || ""} onChange={e => setPartenaireForm(p => ({ ...p, contact: e.target.value }))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Description</label>
-                <textarea style={{ ...inputStyle, marginTop: 6, resize: "vertical", minHeight: 70 }}
-                  placeholder="Rôle du partenaire..." value={partenaireForm.description || ""}
-                  onChange={e => setPartenaireForm(p => ({ ...p, description: e.target.value }))} />
-              </div>
-              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                <button onClick={() => setShowPartenaireModal(false)}
-                  style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 500, color: "#374151" }}>
-                  Annuler
-                </button>
-                <button onClick={handleSubmitPartenaire} disabled={submitting}
-                  style={{ flex: 2, padding: "10px", borderRadius: 8, border: "none", background: submitting ? "#a5b4fc" : "#4f46e5", color: "#fff", cursor: submitting ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 600 }}>
-                  {submitting ? "Enregistrement..." : "💾 Associer le partenaire"}
-                </button>
-              </div>
+              </Field>
+
+              <Field label="Contact">
+                <input
+                  style={styles.input}
+                  value={partenaireForm.contact}
+                  placeholder="Email ou téléphone"
+                  onChange={(event) =>
+                    setPartenaireForm((current) => ({
+                      ...current,
+                      contact: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Description">
+                <textarea
+                  style={styles.textarea}
+                  value={partenaireForm.description}
+                  placeholder="Rôle du partenaire..."
+                  onChange={(event) =>
+                    setPartenaireForm((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+
+              <ModalActions
+                onCancel={() => setShowPartenaireModal(false)}
+                onConfirm={handleAddPartenaire}
+                confirmLabel={
+                  isSubmittingPartenaire
+                    ? "Enregistrement..."
+                    : "Associer le partenaire"
+                }
+                disabled={isSubmittingPartenaire}
+              />
             </div>
           </Modal>
         )}
 
-        {/* ── En-tête ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+        <div style={styles.header}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#111827" }}>{projet.nom}</h2>
-            <p style={{ margin: "4px 0 0 0", color: "#9ca3af", fontSize: 13 }}>ID Projet : #{projet.id}</p>
+            <h1 style={styles.title}>{projet.nom}</h1>
+
+            <p style={styles.subtitle}>
+              Projet #{projet.id} ·{" "}
+              {projet.associationName || `Association #${projet.associationId}`}
+            </p>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => navigate(`/projets/edit/${projet.id}`)} style={btnSecondary}>
+
+          <div style={styles.headerActions}>
+            <button
+              type="button"
+              onClick={() => navigate(`/projets/edit/${projet.id}`)}
+              style={styles.secondaryButton}
+            >
               ✏️ Modifier
             </button>
-            <button onClick={() => navigate("/projets")} style={btnSecondary}>
-              ← Retour à la liste
+
+            <button
+              type="button"
+              onClick={() => navigate("/projets")}
+              style={styles.secondaryButton}
+            >
+              ← Retour
             </button>
           </div>
         </div>
 
-        {/* ── Description ── */}
         <SectionCard title="📋 Description">
-          <p style={{ margin: 0, color: projet.description ? "#4b5563" : "#9ca3af", fontSize: 14, lineHeight: "1.6", fontStyle: projet.description ? "normal" : "italic" }}>
-            {projet.description || "Aucune description enregistrée pour ce projet."}
+          <p
+            style={{
+              ...styles.description,
+              color: projet.description ? "#4b5563" : "#9ca3af",
+              fontStyle: projet.description ? "normal" : "italic",
+            }}
+          >
+            {projet.description || "Aucune description enregistrée."}
           </p>
         </SectionCard>
 
-        {/* ── Indicateurs ── */}
-        <SectionCard title="📊 Indicateurs financiers & Planning">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0" }}>
-            {[
-              {
-                label: "Statut du projet",
-                value: (
-                  <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600, ...statutStyle }}>
-                    {projet.statut?.replace(/_/g, " ") ?? "—"}
-                  </span>
-                ),
-              },
-              {
-                label: "Budget alloué",
-                value: <span style={{ fontWeight: 600, color: "#111827" }}>{budgetGlobal > 0 ? `${budgetGlobal.toLocaleString("fr-FR")} ${sign}` : `0 ${sign}`}</span>,
-              },
-              {
-                label: "Total des dépenses",
-                value: <span style={{ fontWeight: 600, color: totalDepenses > 0 ? "#dc2626" : "#111827" }}>{totalDepenses.toLocaleString("fr-FR")} {sign}</span>,
-              },
-              {
-                label: "Reste disponible",
-                value: <span style={{ fontWeight: 700, color: resteAAllouer >= 0 ? "#16a34a" : "#dc2626" }}>{resteAAllouer.toLocaleString("fr-FR")} {sign}</span>,
-              },
-              {
-                label: "Chef de projet",
-                value: <span style={{ color: "#111827" }}>{projet.chefDeProjetPrenom ? `${projet.chefDeProjetPrenom} ${projet.chefDeProjetNom}` : "Non assigné"}</span>,
-              },
-              {
-                label: "Date de début",
-                value: <span style={{ color: "#111827" }}>{projet.dateDebut ? new Date(projet.dateDebut).toLocaleDateString("fr-FR") : "—"}</span>,
-              },
-              {
-                label: "Date de fin estimée",
-                value: <span style={{ color: "#111827" }}>{projet.dateFin ? new Date(projet.dateFin).toLocaleDateString("fr-FR") : "—"}</span>,
-              },
-            ].map(({ label, value }, i) => (
-              <div key={label} style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "12px 0",
-                borderBottom: "1px solid #f3f4f6",
-                gridColumn: i === 6 ? "1 / -1" : undefined,
-              }}>
-                <span style={{ width: 180, fontSize: 13, fontWeight: 600, color: "#6b7280", flexShrink: 0 }}>{label}</span>
-                <span style={{ fontSize: 14 }}>{value}</span>
-              </div>
-            ))}
+        <SectionCard title="📊 Indicateurs financiers & planning">
+          <div style={styles.indicatorGrid}>
+            <InfoRow
+              label="Statut"
+              value={
+                <span style={{ ...styles.statusBadge, ...statutStyle }}>
+                  {STATUT_PROJET_LABELS[projet.statut]}
+                </span>
+              }
+            />
+
+            <InfoRow
+              label="Budget"
+              value={formatMoney(financialSummary.budget, deviseSign)}
+              strong
+            />
+
+            <InfoRow
+              label="Dépenses"
+              value={formatMoney(financialSummary.totalDepenses, deviseSign)}
+              danger={financialSummary.totalDepenses > 0}
+            />
+
+            <InfoRow
+              label="Reste disponible"
+              value={formatMoney(financialSummary.remaining, deviseSign)}
+              success={financialSummary.remaining >= 0}
+              danger={financialSummary.remaining < 0}
+            />
+
+            <InfoRow
+              label="Chef de projet"
+              value={
+                projet.chefDeProjetPrenom || projet.chefDeProjetNom
+                  ? `${projet.chefDeProjetPrenom ?? ""} ${
+                      projet.chefDeProjetNom ?? ""
+                    }`
+                  : "Non assigné"
+              }
+            />
+
+            <InfoRow label="Date début" value={formatDate(projet.dateDebut)} />
+
+            <InfoRow label="Date fin" value={formatDate(projet.dateFin)} />
           </div>
+
+          {financialSummary.budget > 0 && (
+            <div style={styles.progressWrapper}>
+              <div style={styles.progressHeader}>
+                <span>Consommation du budget</span>
+                <strong>{financialSummary.progress}%</strong>
+              </div>
+
+              <div style={styles.progressTrack}>
+                <div
+                  style={{
+                    ...styles.progressBar,
+                    width: `${financialSummary.progress}%`,
+                    background:
+                      financialSummary.progress >= 90
+                        ? "#ef4444"
+                        : financialSummary.progress >= 60
+                        ? "#f59e0b"
+                        : "#22c55e",
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </SectionCard>
 
-        {/* ── Dépenses ── */}
         <SectionCard
-          title="💸 Dépenses imputées"
+          title="💸 Dépenses"
           action={
-            <button onClick={() => setShowDepenseModal(true)} style={btnPrimary}>
+            <button
+              type="button"
+              onClick={() => setShowDepenseModal(true)}
+              style={styles.primaryButton}
+            >
               + Nouvelle dépense
             </button>
           }
         >
           {!projet.depenses || projet.depenses.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "24px 0", color: "#9ca3af", fontSize: 14, fontStyle: "italic" }}>
-              Aucune dépense enregistrée sur ce projet.
-            </div>
+            <EmptyState text="Aucune dépense enregistrée." />
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <table style={styles.table}>
               <thead>
-                <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
-                  {["Libellé", "Date", "Montant", "Action"].map((h, i) => (
-                    <th key={h} style={{ paddingBottom: 10, fontSize: 12, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: i === 3 ? "right" : i === 2 ? "right" : "left" }}>
-                      {h}
-                    </th>
-                  ))}
+                <tr style={styles.tableHeadRow}>
+                  <th style={styles.th}>Libellé</th>
+                  <th style={styles.th}>Date</th>
+                  <th style={{ ...styles.th, textAlign: "right" }}>Montant</th>
+                  <th style={{ ...styles.th, textAlign: "right" }}>Action</th>
                 </tr>
               </thead>
+
               <tbody>
-                {projet.depenses.map((d) => (
-                  <tr key={d.id} style={{ borderBottom: "1px solid #f9fafb" }}>
-                    <td style={{ padding: "13px 0", fontSize: 14, fontWeight: 500, color: "#111827" }}>{d.libelle}</td>
-                    <td style={{ padding: "13px 0", fontSize: 14, color: "#6b7280" }}>
-                      {d.dateDepense ? new Date(d.dateDepense).toLocaleDateString("fr-FR") : "—"}
+                {projet.depenses.map((depense) => (
+                  <tr key={depense.id} style={styles.tableRow}>
+                    <td style={styles.td}>
+                      <div style={styles.itemTitle}>{depense.libelle}</div>
+
+                      {depense.description && (
+                        <div style={styles.itemDescription}>
+                          {depense.description}
+                        </div>
+                      )}
                     </td>
-                    <td style={{ padding: "13px 0", fontSize: 14, fontWeight: 600, color: "#dc2626", textAlign: "right" }}>
-                      -{d.montant.toLocaleString("fr-FR")} {sign}
+
+                    <td style={styles.td}>{formatDate(depense.dateDepense)}</td>
+
+                    <td style={{ ...styles.td, textAlign: "right" }}>
+                      <strong style={styles.dangerText}>
+                        -{formatMoney(depense.montant, deviseSign)}
+                      </strong>
                     </td>
-                    <td style={{ padding: "13px 0", textAlign: "right" }}>
-                      <button onClick={() => handleDeleteDepense(d.id!)}
-                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>
+
+                    <td style={{ ...styles.td, textAlign: "right" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDepense(depense)}
+                        style={styles.deleteButton}
+                      >
                         Supprimer
                       </button>
                     </td>
@@ -440,41 +648,49 @@ const ProjetDetailPage = () => {
           )}
         </SectionCard>
 
-        {/* ── Partenaires ── */}
         <SectionCard
-          title="🤝 Partenaires du projet"
+          title="🤝 Partenaires"
           action={
-            <button onClick={() => setShowPartenaireModal(true)} style={btnPrimary}>
+            <button
+              type="button"
+              onClick={() => setShowPartenaireModal(true)}
+              style={styles.primaryButton}
+            >
               + Associer un partenaire
             </button>
           }
         >
           {!projet.partenaires || projet.partenaires.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "24px 0", color: "#9ca3af", fontSize: 14, fontStyle: "italic" }}>
-              Aucun partenaire associé.
-            </div>
+            <EmptyState text="Aucun partenaire associé." />
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {projet.partenaires.map((p) => (
-                <div key={p.id} style={{
-                  border: "1.5px solid #e5e7eb",
-                  borderRadius: 10,
-                  padding: 16,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  background: "#fafafa",
-                }}>
+            <div style={styles.partnerGrid}>
+              {projet.partenaires.map((partenaire) => (
+                <div key={partenaire.id} style={styles.partnerCard}>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#111827" }}>{p.nom}</h4>
-                    <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "#6b7280" }}>
-                      {TYPE_PARTENAIRE.find(t => t.value === p.type)?.label || p.type || "—"}
+                    <h3 style={styles.partnerName}>{partenaire.nom}</h3>
+
+                    <p style={styles.partnerType}>
+                      {partenaire.type
+                        ? TYPE_PARTENAIRE_LABELS[partenaire.type]
+                        : "—"}
                     </p>
-                    {p.contact && <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "#4b5563" }}>📞 {p.contact}</p>}
-                    {p.description && <p style={{ margin: "6px 0 0 0", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>"{p.description}"</p>}
+
+                    {partenaire.contact && (
+                      <p style={styles.partnerContact}>📞 {partenaire.contact}</p>
+                    )}
+
+                    {partenaire.description && (
+                      <p style={styles.partnerDescription}>
+                        {partenaire.description}
+                      </p>
+                    )}
                   </div>
-                  <button onClick={() => handleDeletePartenaire(p.id!)}
-                    style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 12, fontWeight: 500, flexShrink: 0 }}>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePartenaire(partenaire)}
+                    style={styles.deleteButton}
+                  >
                     Détacher
                   </button>
                 </div>
@@ -482,10 +698,488 @@ const ProjetDetailPage = () => {
             </div>
           )}
         </SectionCard>
-
       </div>
     </div>
   );
-};
+}
 
-export default ProjetDetailPage;
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={styles.modal}>
+        <div style={styles.modalHeader}>
+          <h2 style={styles.modalTitle}>{title}</h2>
+
+          <button type="button" onClick={onClose} style={styles.closeButton}>
+            ✕
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div style={styles.field}>
+      <label style={styles.label}>
+        {label} {required && <span style={styles.required}>*</span>}
+      </label>
+
+      {children}
+    </div>
+  );
+}
+
+function ModalActions({
+  onCancel,
+  onConfirm,
+  confirmLabel,
+  disabled,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+  confirmLabel: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div style={styles.modalActions}>
+      <button type="button" onClick={onCancel} style={styles.cancelButton}>
+        Annuler
+      </button>
+
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={disabled}
+        style={{
+          ...styles.confirmButton,
+          opacity: disabled ? 0.7 : 1,
+          cursor: disabled ? "not-allowed" : "pointer",
+        }}
+      >
+        {confirmLabel}
+      </button>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>{title}</h2>
+        {action}
+      </div>
+
+      <div style={styles.sectionBody}>{children}</div>
+    </section>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  strong,
+  success,
+  danger,
+}: {
+  label: string;
+  value: ReactNode;
+  strong?: boolean;
+  success?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+
+      <span
+        style={{
+          ...styles.infoValue,
+          fontWeight: strong ? 700 : 500,
+          color: success ? "#16a34a" : danger ? "#dc2626" : "#111827",
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div style={styles.emptyState}>{text}</div>;
+}
+
+const styles: Record<string, CSSProperties> = {
+  page: {
+    padding: "32px 24px",
+    background: "#f8fafc",
+    minHeight: "100vh",
+    fontFamily: "system-ui, sans-serif",
+  },
+  container: {
+    maxWidth: 920,
+    margin: "0 auto",
+  },
+  loading: {
+    minHeight: "60vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#6b7280",
+    fontSize: 15,
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+    marginBottom: 28,
+  },
+  title: {
+    margin: 0,
+    fontSize: 24,
+    fontWeight: 700,
+    color: "#111827",
+  },
+  subtitle: {
+    margin: "4px 0 0",
+    color: "#9ca3af",
+    fontSize: 13,
+  },
+  headerActions: {
+    display: "flex",
+    gap: 10,
+  },
+  errorBox: {
+    background: "#fef2f2",
+    border: "1px solid #fca5a5",
+    color: "#dc2626",
+    borderRadius: 8,
+    padding: "12px 16px",
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  primaryButton: {
+    padding: "8px 16px",
+    background: "#4f46e5",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  secondaryButton: {
+    padding: "8px 16px",
+    background: "#fff",
+    border: "1.5px solid #e5e7eb",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#374151",
+  },
+  description: {
+    margin: 0,
+    fontSize: 14,
+    lineHeight: 1.6,
+  },
+  section: {
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 20,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+  },
+  sectionHeader: {
+    padding: "14px 20px",
+    background: "#fafafa",
+    borderBottom: "1px solid #e5e7eb",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#374151",
+  },
+  sectionBody: {
+    padding: 20,
+  },
+  indicatorGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    columnGap: 24,
+  },
+  infoRow: {
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 0",
+    borderBottom: "1px solid #f3f4f6",
+  },
+  infoLabel: {
+    width: 150,
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#6b7280",
+    flexShrink: 0,
+  },
+  infoValue: {
+    fontSize: 14,
+  },
+  statusBadge: {
+    padding: "3px 10px",
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
+  },
+  progressWrapper: {
+    marginTop: 18,
+  },
+  progressHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 13,
+    color: "#6b7280",
+    marginBottom: 6,
+  },
+  progressTrack: {
+    height: 8,
+    background: "#e5e7eb",
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: 999,
+    transition: "width 0.3s ease",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    textAlign: "left",
+  },
+  tableHeadRow: {
+    borderBottom: "2px solid #f3f4f6",
+  },
+  th: {
+    paddingBottom: 10,
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#9ca3af",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  tableRow: {
+    borderBottom: "1px solid #f9fafb",
+  },
+  td: {
+    padding: "13px 0",
+    fontSize: 14,
+    color: "#4b5563",
+    verticalAlign: "top",
+  },
+  itemTitle: {
+    fontWeight: 600,
+    color: "#111827",
+  },
+  itemDescription: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  dangerText: {
+    color: "#dc2626",
+  },
+  deleteButton: {
+    background: "none",
+    border: "none",
+    color: "#ef4444",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  partnerGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 16,
+  },
+  partnerCard: {
+    border: "1.5px solid #e5e7eb",
+    borderRadius: 10,
+    padding: 16,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    background: "#fafafa",
+  },
+  partnerName: {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#111827",
+  },
+  partnerType: {
+    margin: "4px 0 0",
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  partnerContact: {
+    margin: "4px 0 0",
+    fontSize: 12,
+    color: "#4b5563",
+  },
+  partnerDescription: {
+    margin: "6px 0 0",
+    fontSize: 12,
+    color: "#6b7280",
+    fontStyle: "italic",
+  },
+  emptyState: {
+    textAlign: "center",
+    padding: "24px 0",
+    color: "#9ca3af",
+    fontSize: 14,
+    fontStyle: "italic",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: 16,
+  },
+  modal: {
+    background: "#fff",
+    borderRadius: 12,
+    padding: 28,
+    width: "100%",
+    maxWidth: 500,
+    boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+  },
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#111827",
+  },
+  closeButton: {
+    background: "none",
+    border: "none",
+    fontSize: 20,
+    cursor: "pointer",
+    color: "#9ca3af",
+    lineHeight: 1,
+  },
+  modalForm: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+  },
+  field: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#4b5563",
+  },
+  required: {
+    color: "#ef4444",
+  },
+  input: {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1.5px solid #e5e7eb",
+    fontSize: 14,
+    boxSizing: "border-box",
+    outline: "none",
+    fontFamily: "inherit",
+    color: "#111827",
+    background: "#fff",
+  },
+  textarea: {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1.5px solid #e5e7eb",
+    fontSize: 14,
+    boxSizing: "border-box",
+    outline: "none",
+    fontFamily: "inherit",
+    color: "#111827",
+    background: "#fff",
+    resize: "vertical",
+    minHeight: 80,
+  },
+  modalActions: {
+    display: "flex",
+    gap: 10,
+    marginTop: 4,
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    border: "1.5px solid #e5e7eb",
+    background: "#fff",
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#374151",
+  },
+  confirmButton: {
+    flex: 2,
+    padding: 10,
+    borderRadius: 8,
+    border: "none",
+    background: "#4f46e5",
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 600,
+  },
+};

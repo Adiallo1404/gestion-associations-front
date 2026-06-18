@@ -52,10 +52,10 @@ import MyProfilePage from './pages/MyProfilePage';
 import SuiviCotisationsPage from './pages/SuiviCotisationsPage';
 import SuiviCotisationSelectPage from './pages/SuiviCotisationSelectPage';
 import PaiementPage from './pages/PaiementPage';
-import BureauListPage from './pages/BureauListPage';   
-import BureauFormPage from './pages/BureauFormPage';   
+import BureauListPage from './pages/BureauListPage';
+import BureauFormPage from './pages/BureauFormPage';
 
-// ─── NOUVEAUX IMPORTS : PROJETS ──────────────────────────────────────────
+// ─── NEW IMPORTS: PROJECTS ───────────────────────────────────────────────
 import ProjetListPage from './pages/ProjetListPage';
 import ProjetDetailPage from './pages/ProjetDetailPage';
 import ProjetFormPage from './pages/ProjetFormPage';
@@ -97,22 +97,22 @@ function App() {
               <Route path="/associations/:id"      element={<PR><AssociationDetailPage /></PR>} />
               <Route path="/associations/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><AssociationFormPage /></PRL>} />
 
-              {/* ─── MON PROFIL ─── */}
+              {/* ─── MY PROFILE ─── */}
               <Route path="/users/me" element={<PR><MyProfilePage /></PR>} />
 
-              {/* ─── UTILISATEURS ─── */}
+              {/* ─── USERS ─── */}
               <Route path="/users"          element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserListPage /></PRL>} />
               <Route path="/users/new"      element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserFormPage /></PRL>} />
               <Route path="/users/:id"      element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserDetailPage /></PRL>} />
               <Route path="/users/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><UserFormPage /></PRL>} />
 
-              {/* ─── MEMBRES ─── */}
+              {/* ─── MEMBERS ─── */}
               <Route path="/members"          element={<PR><MemberListPage /></PR>} />
               <Route path="/members/new"      element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberFormPage /></PRL>} />
               <Route path="/members/:id"      element={<PR><MemberDetailPage /></PR>} />
               <Route path="/members/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberFormPage /></PRL>} />
 
-              {/* ─── HISTORIQUE MEMBRES ─── */}
+              {/* ─── MEMBER HISTORY ─── */}
               <Route path="/member-histories"     element={<PR><MemberHistoryListPage /></PR>} />
               <Route path="/member-histories/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><MemberHistoryFormPage /></PRL>} />
               <Route path="/member-histories/:id" element={<PR><MemberHistoryDetailPage /></PR>} />
@@ -129,7 +129,7 @@ function App() {
               <Route path="/cotisations/:id"      element={<PR><CotisationDetailPage /></PR>} />
               <Route path="/cotisations/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationFormPage /></PRL>} />
 
-              {/* ─── PAIEMENTS ─── */}
+              {/* ─── PAYMENTS ─── */}
               <Route path="/paiements"               element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><PaiementPage /></PRL>} />
               <Route path="/paiements/:cotisationId" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><PaiementPage /></PRL>} />
 
@@ -138,13 +138,13 @@ function App() {
               <Route path="/bureaux/new"      element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><BureauFormPage /></PRL>} />
               <Route path="/bureaux/:id/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><BureauFormPage /></PRL>} />
 
-              {/* ─── PROJETS MULTI-DEVISES ─── */}
+              {/* ─── MULTI-CURRENCY PROJECTS ─── */}
               <Route path="/projets"          element={<PR><ProjetListPage /></PR>} />
               <Route path="/projets/new"      element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><ProjetFormPage /></PRL>} />
               <Route path="/projets/:id"      element={<PR><ProjetDetailPage /></PR>} />
               <Route path="/projets/edit/:id" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><ProjetFormPage /></PRL>} />
 
-              {/* ─── EMAILS ENVOYÉS ─── */}
+              {/* ─── SENT EMAILS ─── */}
               <Route path="/emails-envoyes"     element={<PR><EmailListPage /></PR>} />
               <Route path="/emails-envoyes/new" element={<PR><EmailFormPage /></PR>} />
               <Route path="/emails-envoyes/:id" element={<PR><EmailDetailPage /></PR>} />
@@ -160,7 +160,7 @@ function App() {
               <Route path="/notifications/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><NotificationFormPage /></PRL>} />
               <Route path="/notifications/:id" element={<PR><NotificationDetailPage /></PR>} />
 
-              {/* ─── RÔLES ─── */}
+              {/* ─── ROLES ─── */}
               <Route path="/roles"          element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><RoleListPage /></PRL>} />
               <Route path="/roles/new"      element={<PRL roles={['SUPER_ADMIN']}><RoleFormPage /></PRL>} />
               <Route path="/roles/:id"      element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><RoleDetailPage /></PRL>} />
@@ -178,7 +178,7 @@ function App() {
               <Route path="/cotisation-configs/association/:associationId"      element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigDetailPage /></PRL>} />
               <Route path="/cotisation-configs/association/:associationId/edit" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><CotisationConfigFormPage /></PRL>} />
 
-              {/* ─── LIENS DE PARTAGE ─── */}
+              {/* ─── SHARING LINKS ─── */}
               <Route path="/liens-partage"     element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><LienPartageListPage /></PRL>} />
               <Route path="/liens-partage/new" element={<PRL roles={['ADMIN', 'SUPER_ADMIN']}><LienPartageFormPage /></PRL>} />
               <Route path="/liens-partage/:id" element={<PR><LienPartageDetailPage /></PR>} />

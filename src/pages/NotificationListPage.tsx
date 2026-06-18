@@ -1,95 +1,247 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
-import { notificationService } from "../api/notificationService";
-import type { NotificationDto } from "../types/notification";
 import ConfirmModal from "../components/ConfirmModal";
+import { notificationService } from "../api/notificationService";
+import type {
+  NotificationDto,
+  NotificationFilter,
+  StatutNotification,
+  TypeNotification,
+} from "../types/notification";
 import { useWindowSize } from "../hooks/useWindowSize";
 
-const TYPE_LABELS: Record<string, string> = {
-  RELANCE_COTISATION:   "Relance cotisation",
-  COTISATION_PAYEE:     "Cotisation payée",
-  NOUVEAU_MEMBRE:       "Nouveau membre",
-  CHANGEMENT_STATUT:    "Changement statut",
-  DOCUMENT_PARTAGE:     "Document partagé",
-  RAPPEL_ECHEANCE:      "Rappel échéance",
+const PAGE_SIZE = 10;
+
+const TYPE_LABELS: Record<TypeNotification, string> = {
+  RELANCE_COTISATION: "Relance cotisation",
+  COTISATION_PAYEE: "Cotisation payée",
+  NOUVEAU_MEMBRE: "Nouveau membre",
+  CHANGEMENT_STATUT: "Changement statut",
+  DOCUMENT_PARTAGE: "Document partagé",
+  RAPPEL_ECHEANCE: "Rappel échéance",
   INFORMATION_GENERALE: "Information générale",
 };
 
-const STATUT_COLORS: Record<string, string> = {
-  NON_LUE:  "#3b82f6",
-  LUE:      "#22c55e",
+const STATUT_COLORS: Record<StatutNotification, string> = {
+  NON_LUE: "#3b82f6",
+  LUE: "#22c55e",
   ARCHIVEE: "#9ca3af",
 };
 
-const STATUT_LABELS: Record<string, string> = {
-  NON_LUE:  "Non lue",
-  LUE:      "Lue",
+const STATUT_LABELS: Record<StatutNotification, string> = {
+  NON_LUE: "Non lue",
+  LUE: "Lue",
   ARCHIVEE: "Archivée",
 };
+
+interface NotificationStats {
+  total: number;
+  nonLues: number;
+  lues: number;
+  archivees: number;
+}
+
+interface DeleteModalState {
+  isOpen: boolean;
+  id: number | null;
+  label: string;
+}
 
 export default function NotificationListPage() {
   const navigate = useNavigate();
   const { isMobile, isTablet } = useWindowSize();
+
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<NotificationFilter>({});
   const [page, setPage] = useState(0);
-  const [stats, setStats] = useState({ total: 0, nonLues: 0, lues: 0, archivees: 0 });
+  const [totalPages, setTotalPages] = useState(0);
+  const [stats, setStats] = useState<NotificationStats>({
+    total: 0,
+    nonLues: 0,
+    lues: 0,
+    archivees: 0,
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [modal, setModal] = useState<{ isOpen: boolean; id: number | null; label: string }>
-    ({ isOpen: false, id: null, label: "" });
+  const [modal, setModal] = useState<DeleteModalState>({
+    isOpen: false,
+    id: null,
+    label: "",
+  });
 
-  const fetchData = async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const allData = await notificationService.getAll({ size: 1000 });
-      const all: NotificationDto[] = allData.content || allData;
-      setStats({
-        total:     all.length,
-        nonLues:   all.filter((n) => n.statut === "NON_LUE").length,
-        lues:      all.filter((n) => n.statut === "LUE").length,
-        archivees: all.filter((n) => n.statut === "ARCHIVEE").length,
+      const response = await notificationService.getNotifications({
+        page: 0,
+        size: 1000,
       });
-      const pageData = await notificationService.getAll({ ...filters, page });
-      setNotifications(pageData.content || pageData);
-    } catch (err) { console.error(err); }
-  };
 
-  useEffect(() => { fetchData(); }, [filters, page]);
+      const allNotifications = response.content ?? [];
 
-  const handleMarkAsRead = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await notificationService.markAsRead(id);
-    fetchData();
-  };
+      setStats({
+        total: allNotifications.length,
+        nonLues: allNotifications.filter((item) => item.statut === "NON_LUE")
+          .length,
+        lues: allNotifications.filter((item) => item.statut === "LUE").length,
+        archivees: allNotifications.filter((item) => item.statut === "ARCHIVEE")
+          .length,
+      });
+    } catch (error) {
+      console.error("Failed to load notification stats", error);
+    }
+  }, []);
 
-  const handleDeleteClick = (id: number, titre: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setModal({ isOpen: true, id, label: titre });
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!modal.id) return;
+  const fetchNotifications = useCallback(async () => {
     try {
-      await notificationService.delete(modal.id);
-      setModal({ isOpen: false, id: null, label: "" });
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      setModal({ isOpen: false, id: null, label: "" });
+      setIsLoading(true);
+
+      const response = await notificationService.getNotifications({
+        ...filters,
+        page,
+        size: PAGE_SIZE,
+        sort: "dateCreation,desc",
+      });
+
+      setNotifications(response.content ?? []);
+      setTotalPages(response.totalPages ?? 0);
+    } catch (error) {
+      console.error("Failed to load notifications", error);
+      setNotifications([]);
+      setTotalPages(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters, page]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const updateFilter = <K extends keyof NotificationFilter>(
+    key: K,
+    value: NotificationFilter[K] | undefined
+  ) => {
+    setPage(0);
+
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [key]: value || undefined,
+    }));
+  };
+
+  const handleMarkAsRead = async (
+    id: number,
+    event: MouseEvent<HTMLButtonElement>
+  ) => {
+    event.stopPropagation();
+
+    try {
+      await notificationService.markNotificationAsRead(id);
+      await Promise.all([fetchNotifications(), fetchStats()]);
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
     }
   };
 
-  const handleCancelDelete = () => setModal({ isOpen: false, id: null, label: "" });
+  const handleDeleteClick = (
+    id: number,
+    title: string,
+    event: MouseEvent<HTMLButtonElement>
+  ) => {
+    event.stopPropagation();
 
-  const statCards = [
-    { label: "Total",     value: stats.total,     color: "#111827", bg: "#f9fafb" },
-    { label: "Non lues",  value: stats.nonLues,   color: "#185FA5", bg: "#E6F1FB" },
-    { label: "Lues",      value: stats.lues,       color: "#3B6D11", bg: "#EAF3DE" },
-    { label: "Archivées", value: stats.archivees,  color: "#5F5E5A", bg: "#F1EFE8" },
-  ];
+    setModal({
+      isOpen: true,
+      id,
+      label: title,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (modal.id === null) return;
+
+    try {
+      await notificationService.deleteNotification(modal.id);
+
+      setModal({
+        isOpen: false,
+        id: null,
+        label: "",
+      });
+
+      await Promise.all([fetchNotifications(), fetchStats()]);
+    } catch (error) {
+      console.error("Failed to delete notification", error);
+
+      setModal({
+        isOpen: false,
+        id: null,
+        label: "",
+      });
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setModal({
+      isOpen: false,
+      id: null,
+      label: "",
+    });
+  };
+
+  const handlePreviousPage = () => {
+    setPage((currentPage) => Math.max(currentPage - 1, 0));
+  };
+
+  const handleNextPage = () => {
+    setPage((currentPage) =>
+      totalPages > 0 ? Math.min(currentPage + 1, totalPages - 1) : currentPage
+    );
+  };
+
+  const statCards = useMemo(
+    () => [
+      {
+        label: "Total",
+        value: stats.total,
+        color: "#111827",
+        bg: "#f9fafb",
+      },
+      {
+        label: "Non lues",
+        value: stats.nonLues,
+        color: "#185FA5",
+        bg: "#E6F1FB",
+      },
+      {
+        label: "Lues",
+        value: stats.lues,
+        color: "#3B6D11",
+        bg: "#EAF3DE",
+      },
+      {
+        label: "Archivées",
+        value: stats.archivees,
+        color: "#5F5E5A",
+        bg: "#F1EFE8",
+      },
+    ],
+    [stats]
+  );
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "32px 40px", background: "#f8fafc", minHeight: "100vh" }}>
-
+    <div style={pageStyle(isMobile)}>
       <ConfirmModal
         isOpen={modal.isOpen}
         title="Supprimer la notification"
@@ -100,112 +252,164 @@ export default function NotificationListPage() {
         onCancel={handleCancelDelete}
       />
 
-      {/* ✅ FIL D'ARIANE (BREADCRUMB) */}
       <nav style={breadcrumbStyle}>
-        <span style={breadcrumbHome} onClick={() => navigate("/")}>
+        <span style={breadcrumbHomeStyle} onClick={() => navigate("/")}>
           🏠 Accueil
         </span>
-        <span style={breadcrumbSeparator}>›</span>
-        <span style={breadcrumbCurrent}>Notifications</span>
+        <span style={breadcrumbSeparatorStyle}>›</span>
+        <span style={breadcrumbCurrentStyle}>Notifications</span>
       </nav>
 
-      {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div style={headerStyle}>
         <div>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 32, fontWeight: 700, color: "#0f172a" }}>
-            🔔 Notifications
-          </h2>
-          {!isMobile && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 14 }}>Gérez vos alertes et communications système</p>}
+          <h2 style={titleStyle(isMobile)}>🔔 Notifications</h2>
+
+          {!isMobile && (
+            <p style={subtitleStyle}>
+              Gérez vos alertes et communications système
+            </p>
+          )}
         </div>
-        <button style={btnAdd} onClick={() => navigate("/notifications/new")}>
+
+        <button
+          style={addButtonStyle}
+          onClick={() => navigate("/notifications/new")}
+        >
           {isMobile ? "➕" : "➕ Créer une notification"}
         </button>
       </div>
 
-      {/* STATS */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0,1fr))",
-        gap: isMobile ? 8 : 16,
-        marginBottom: 24,
-      }}>
+      <div style={statsGridStyle(isMobile)}>
         {statCards.map(({ label, value, color, bg }) => (
-          <div key={label} style={{ background: bg, borderRadius: 12, padding: isMobile ? "12px" : "16px 20px", border: "1px solid #e2e8f0" }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, textTransform: "uppercase" }}>{label}</div>
-            <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color }}>{value}</div>
+          <div key={label} style={statCardStyle(bg, isMobile)}>
+            <div style={statLabelStyle}>{label}</div>
+            <div style={statValueStyle(color, isMobile)}>{value}</div>
           </div>
         ))}
       </div>
 
-      {/* FILTRES */}
-      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: isMobile ? 12 : 16, marginBottom: 24, display: "flex", gap: 10, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
+      <div style={filtersContainerStyle(isMobile)}>
         <select
           style={{ ...inputStyle, flex: 1 }}
-          onChange={(e) => { setPage(0); setFilters({ ...filters, statut: e.target.value || undefined }); }}
+          value={filters.statut ?? ""}
+          onChange={(event) =>
+            updateFilter(
+              "statut",
+              event.target.value
+                ? (event.target.value as StatutNotification)
+                : undefined
+            )
+          }
         >
           <option value="">-- Tous les statuts --</option>
           <option value="NON_LUE">Non lue</option>
           <option value="LUE">Lue</option>
           <option value="ARCHIVEE">Archivée</option>
         </select>
+
         {!isMobile && (
           <select
             style={{ ...inputStyle, flex: 1 }}
-            onChange={(e) => { setPage(0); setFilters({ ...filters, typeNotification: e.target.value || undefined }); }}
+            value={filters.typeNotification ?? ""}
+            onChange={(event) =>
+              updateFilter(
+                "typeNotification",
+                event.target.value
+                  ? (event.target.value as TypeNotification)
+                  : undefined
+              )
+            }
           >
             <option value="">-- Tous les types --</option>
-            {Object.entries(TYPE_LABELS).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
+
+            {Object.entries(TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         )}
-        <button style={btnPrimary} onClick={fetchData}>
-          {isMobile ? "🔍" : "🔍 Filtrer"}
-        </button>
       </div>
 
-      {/* CONTENU */}
-      {isMobile ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {isLoading ? (
+        <p style={emptyStateStyle}>Chargement des notifications...</p>
+      ) : isMobile ? (
+        <div style={mobileListStyle}>
           {notifications.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#9ca3af", padding: 40 }}>Aucune notification</p>
-          ) : notifications.map((n) => (
-            <div
-              key={n.id}
-              onClick={() => navigate(`/notifications/${n.id}`)}
-              style={{
-                background: n.statut === "NON_LUE" ? "#eff6ff" : "#fff",
-                border: `1px solid ${n.statut === "NON_LUE" ? "#bfdbfe" : "#e2e8f0"}`,
-                borderRadius: 12, padding: 14, cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                <div style={{ fontWeight: n.statut === "NON_LUE" ? 700 : 500, fontSize: 14, flex: 1, marginRight: 8, color: "#1e293b" }}>
-                  {n.statut === "NON_LUE" && <span style={{ color: "#3b82f6", marginRight: 6 }}>●</span>}
-                  {n.titre}
+            <p style={emptyStateStyle}>Aucune notification</p>
+          ) : (
+            notifications.map((notification) => (
+              <div
+                key={notification.id}
+                onClick={() => navigate(`/notifications/${notification.id}`)}
+                style={mobileCardStyle(notification.statut)}
+              >
+                <div style={mobileCardHeaderStyle}>
+                  <div style={mobileCardTitleStyle(notification.statut)}>
+                    {notification.statut === "NON_LUE" && (
+                      <span style={unreadDotStyle}>●</span>
+                    )}
+                    {notification.titre}
+                  </div>
+
+                  <span style={statusBadgeStyle(notification.statut)}>
+                    {STATUT_LABELS[notification.statut]}
+                  </span>
                 </div>
-                <span style={{ background: STATUT_COLORS[n.statut!] + "22", color: STATUT_COLORS[n.statut!], padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {STATUT_LABELS[n.statut!]}
-                </span>
+
+                <div style={mobileMetaStyle}>
+                  {TYPE_LABELS[notification.typeNotification]} ·{" "}
+                  {notification.dateCreation
+                    ? new Date(notification.dateCreation).toLocaleDateString(
+                        "fr-FR"
+                      )
+                    : "—"}
+                </div>
+
+                <div style={mobileActionsStyle}>
+                  <button
+                    style={{ ...viewButtonStyle, flex: 1 }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/notifications/${notification.id}`);
+                    }}
+                  >
+                    👁️
+                  </button>
+
+                  {notification.statut === "NON_LUE" && (
+                    <button
+                      style={{ ...readButtonStyle, flex: 1 }}
+                      onClick={(event) =>
+                        handleMarkAsRead(notification.id, event)
+                      }
+                    >
+                      ✅
+                    </button>
+                  )}
+
+                  <button
+                    style={{ ...deleteButtonStyle, flex: 1 }}
+                    onClick={(event) =>
+                      handleDeleteClick(
+                        notification.id,
+                        notification.titre,
+                        event
+                      )
+                    }
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>
-                {TYPE_LABELS[n.typeNotification] || n.typeNotification} · {n.dateCreation ? new Date(n.dateCreation).toLocaleDateString("fr-FR") : "—"}
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...btnView, flex: 1 }} onClick={(e) => { e.stopPropagation(); navigate(`/notifications/${n.id}`); }}>👁️</button>
-                {n.statut === "NON_LUE" && (
-                  <button style={{ ...btnRead, flex: 1 }} onClick={(e) => handleMarkAsRead(n.id!, e)}>✅</button>
-                )}
-                <button style={{ ...btnDelete, flex: 1 }} onClick={(e) => handleDeleteClick(n.id!, n.titre, e)}>🗑️</button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       ) : (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <div style={tableContainerStyle}>
           <table style={tableStyle}>
             <thead>
-              <tr style={{ background: "#F5F3FF", color: "#5B21B6" }}>
+              <tr style={tableHeaderRowStyle}>
                 <th style={thStyle}>Titre</th>
                 {!isTablet && <th style={thStyle}>Type</th>}
                 <th style={thStyle}>Statut</th>
@@ -213,58 +417,129 @@ export default function NotificationListPage() {
                 <th style={thStyle}>Actions</th>
               </tr>
             </thead>
+
             <tbody>
               {notifications.length === 0 ? (
-                <tr><td colSpan={5} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>Aucune notification</td></tr>
-              ) : notifications.map((n) => (
-                <tr
-                  key={n.id}
-                  style={{ textAlign: "center", borderBottom: "1px solid #f1f5f9", background: n.statut === "NON_LUE" ? "#f5f8ff" : "white", cursor: "pointer" }}
-                  onClick={() => navigate(`/notifications/${n.id}`)}
-                >
-                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: n.statut === "NON_LUE" ? 600 : 400, color: "#1e293b" }}>
-                    {n.statut === "NON_LUE" && <span style={{ color: "#3b82f6", marginRight: 8 }}>●</span>}
-                    {n.titre}
-                  </td>
-                  {!isTablet && <td style={{ ...tdStyle, color: "#64748b" }}>{TYPE_LABELS[n.typeNotification] || n.typeNotification}</td>}
-                  <td style={tdStyle}>
-                    <span style={{ background: STATUT_COLORS[n.statut!] + "22", color: STATUT_COLORS[n.statut!], padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                      {STATUT_LABELS[n.statut!]}
-                    </span>
-                  </td>
-                  {!isTablet && (
-                    <td style={{ ...tdStyle, color: "#64748b", fontSize: 13 }}>
-                      {n.dateCreation ? new Date(n.dateCreation).toLocaleString("fr-FR") : "—"}
-                    </td>
-                  )}
-                  <td style={tdStyle}>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                      <button style={btnView} onClick={(e) => { e.stopPropagation(); navigate(`/notifications/${n.id}`); }}>👁️</button>
-                      {n.statut === "NON_LUE" && (
-                        <button style={btnRead} onClick={(e) => handleMarkAsRead(n.id!, e)}>✅</button>
-                      )}
-                      <button style={btnDelete} onClick={(e) => handleDeleteClick(n.id!, n.titre, e)}>🗑️</button>
-                    </div>
+                <tr>
+                  <td colSpan={isTablet ? 3 : 5} style={emptyTableCellStyle}>
+                    Aucune notification
                   </td>
                 </tr>
-              ))}
+              ) : (
+                notifications.map((notification) => (
+                  <tr
+                    key={notification.id}
+                    style={tableRowStyle(notification.statut)}
+                    onClick={() =>
+                      navigate(`/notifications/${notification.id}`)
+                    }
+                  >
+                    <td style={titleCellStyle(notification.statut)}>
+                      {notification.statut === "NON_LUE" && (
+                        <span style={unreadDotStyle}>●</span>
+                      )}
+                      {notification.titre}
+                    </td>
+
+                    {!isTablet && (
+                      <td style={{ ...tdStyle, color: "#64748b" }}>
+                        {TYPE_LABELS[notification.typeNotification]}
+                      </td>
+                    )}
+
+                    <td style={tdStyle}>
+                      <span style={statusBadgeStyle(notification.statut)}>
+                        {STATUT_LABELS[notification.statut]}
+                      </span>
+                    </td>
+
+                    {!isTablet && (
+                      <td style={dateCellStyle}>
+                        {notification.dateCreation
+                          ? new Date(
+                              notification.dateCreation
+                            ).toLocaleString("fr-FR")
+                          : "—"}
+                      </td>
+                    )}
+
+                    <td style={tdStyle}>
+                      <div style={actionsGroupStyle}>
+                        <button
+                          style={viewButtonStyle}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(`/notifications/${notification.id}`);
+                          }}
+                        >
+                          👁️
+                        </button>
+
+                        {notification.statut === "NON_LUE" && (
+                          <button
+                            style={readButtonStyle}
+                            onClick={(event) =>
+                              handleMarkAsRead(notification.id, event)
+                            }
+                          >
+                            ✅
+                          </button>
+                        )}
+
+                        <button
+                          style={deleteButtonStyle}
+                          onClick={(event) =>
+                            handleDeleteClick(
+                              notification.id,
+                              notification.titre,
+                              event
+                            )
+                          }
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* PAGINATION */}
-      <div style={{ marginTop: 24, display: "flex", justifyContent: "center", alignItems: "center", gap: 12 }}>
-        <button style={btnPage} onClick={() => setPage(page - 1)} disabled={page === 0}>⬅</button>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>Page {page + 1}</span>
-        <button style={btnPage} onClick={() => setPage(page + 1)}>➡</button>
+      <div style={paginationStyle}>
+        <button
+          style={pageButtonStyle}
+          onClick={handlePreviousPage}
+          disabled={page === 0}
+        >
+          ⬅
+        </button>
+
+        <span style={pageIndicatorStyle}>
+          Page {page + 1} / {Math.max(totalPages, 1)}
+        </span>
+
+        <button
+          style={pageButtonStyle}
+          onClick={handleNextPage}
+          disabled={totalPages === 0 || page >= totalPages - 1}
+        >
+          ➡
+        </button>
       </div>
     </div>
   );
 }
 
-// ── Styles Breadcrumb ──────────────────────────────────────────────────────────
-const breadcrumbStyle: React.CSSProperties = {
+const pageStyle = (isMobile: boolean): CSSProperties => ({
+  padding: isMobile ? "12px" : "32px 40px",
+  background: "#f8fafc",
+  minHeight: "100vh",
+});
+
+const breadcrumbStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 8,
@@ -272,7 +547,7 @@ const breadcrumbStyle: React.CSSProperties = {
   fontSize: 14,
 };
 
-const breadcrumbHome: React.CSSProperties = {
+const breadcrumbHomeStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 6,
@@ -281,24 +556,264 @@ const breadcrumbHome: React.CSSProperties = {
   fontWeight: 500,
 };
 
-const breadcrumbSeparator: React.CSSProperties = {
+const breadcrumbSeparatorStyle: CSSProperties = {
   color: "#94a3b8",
   fontSize: 16,
 };
 
-const breadcrumbCurrent: React.CSSProperties = {
+const breadcrumbCurrentStyle: CSSProperties = {
   color: "#0f172a",
   fontWeight: 600,
 };
 
-// ── Autres Styles ──────────────────────────────────────────────────────────────
-const inputStyle = { padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: 14, background: "#fff" } as React.CSSProperties;
-const btnPrimary = { padding: "10px 20px", background: "#7c3aed", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600 } as React.CSSProperties;
-const btnAdd     = { padding: "10px 16px", background: "#7c3aed", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: 14 } as React.CSSProperties;
-const btnView    = { background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe", padding: "6px 10px", borderRadius: 6, cursor: "pointer" } as React.CSSProperties;
-const btnRead    = { background: "#f0fdf4", color: "#22c55e", border: "1px solid #bbf7d0", padding: "6px 10px", borderRadius: 6, cursor: "pointer" } as React.CSSProperties;
-const btnDelete  = { background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", padding: "6px 10px", borderRadius: 6, cursor: "pointer" } as React.CSSProperties;
-const btnPage    = { padding: "8px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" } as React.CSSProperties;
-const tableStyle = { width: "100%", borderCollapse: "collapse" as const, background: "white" };
-const thStyle    = { padding: "14px 16px", fontWeight: 600, fontSize: 13, borderBottom: "1px solid #DDD6FE" };
-const tdStyle    = { padding: "12px 16px" } as React.CSSProperties;
+const headerStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 24,
+};
+
+const titleStyle = (isMobile: boolean): CSSProperties => ({
+  margin: 0,
+  fontSize: isMobile ? 18 : 32,
+  fontWeight: 700,
+  color: "#0f172a",
+});
+
+const subtitleStyle: CSSProperties = {
+  margin: "4px 0 0",
+  color: "#64748b",
+  fontSize: 14,
+};
+
+const addButtonStyle: CSSProperties = {
+  padding: "10px 16px",
+  background: "#7c3aed",
+  color: "white",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 14,
+};
+
+const statsGridStyle = (isMobile: boolean): CSSProperties => ({
+  display: "grid",
+  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0,1fr))",
+  gap: isMobile ? 8 : 16,
+  marginBottom: 24,
+});
+
+const statCardStyle = (background: string, isMobile: boolean): CSSProperties => ({
+  background,
+  borderRadius: 12,
+  padding: isMobile ? "12px" : "16px 20px",
+  border: "1px solid #e2e8f0",
+});
+
+const statLabelStyle: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: "#64748b",
+  marginBottom: 4,
+  textTransform: "uppercase",
+};
+
+const statValueStyle = (color: string, isMobile: boolean): CSSProperties => ({
+  fontSize: isMobile ? 22 : 28,
+  fontWeight: 700,
+  color,
+});
+
+const filtersContainerStyle = (isMobile: boolean): CSSProperties => ({
+  background: "#fff",
+  border: "1px solid #e2e8f0",
+  borderRadius: 12,
+  padding: isMobile ? 12 : 16,
+  marginBottom: 24,
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
+  flexDirection: isMobile ? "column" : "row",
+});
+
+const inputStyle: CSSProperties = {
+  padding: "10px",
+  borderRadius: 8,
+  border: "1px solid #cbd5e1",
+  fontSize: 14,
+  background: "#fff",
+};
+
+const mobileListStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+};
+
+const emptyStateStyle: CSSProperties = {
+  textAlign: "center",
+  color: "#9ca3af",
+  padding: 40,
+};
+
+const mobileCardStyle = (statut: StatutNotification): CSSProperties => ({
+  background: statut === "NON_LUE" ? "#eff6ff" : "#fff",
+  border: `1px solid ${statut === "NON_LUE" ? "#bfdbfe" : "#e2e8f0"}`,
+  borderRadius: 12,
+  padding: 14,
+  cursor: "pointer",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+});
+
+const mobileCardHeaderStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  marginBottom: 6,
+};
+
+const mobileCardTitleStyle = (statut: StatutNotification): CSSProperties => ({
+  fontWeight: statut === "NON_LUE" ? 700 : 500,
+  fontSize: 14,
+  flex: 1,
+  marginRight: 8,
+  color: "#1e293b",
+});
+
+const unreadDotStyle: CSSProperties = {
+  color: "#3b82f6",
+  marginRight: 6,
+};
+
+const statusBadgeStyle = (statut: StatutNotification): CSSProperties => ({
+  background: `${STATUT_COLORS[statut]}22`,
+  color: STATUT_COLORS[statut],
+  padding: "4px 12px",
+  borderRadius: 20,
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+});
+
+const mobileMetaStyle: CSSProperties = {
+  fontSize: 12,
+  color: "#64748b",
+  marginBottom: 12,
+};
+
+const mobileActionsStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+};
+
+const tableContainerStyle: CSSProperties = {
+  background: "#fff",
+  border: "1px solid #e2e8f0",
+  borderRadius: 12,
+  overflow: "hidden",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+};
+
+const tableStyle: CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  background: "white",
+};
+
+const tableHeaderRowStyle: CSSProperties = {
+  background: "#F5F3FF",
+  color: "#5B21B6",
+};
+
+const thStyle: CSSProperties = {
+  padding: "14px 16px",
+  fontWeight: 600,
+  fontSize: 13,
+  borderBottom: "1px solid #DDD6FE",
+};
+
+const tableRowStyle = (statut: StatutNotification): CSSProperties => ({
+  textAlign: "center",
+  borderBottom: "1px solid #f1f5f9",
+  background: statut === "NON_LUE" ? "#f5f8ff" : "white",
+  cursor: "pointer",
+});
+
+const tdStyle: CSSProperties = {
+  padding: "12px 16px",
+};
+
+const titleCellStyle = (statut: StatutNotification): CSSProperties => ({
+  ...tdStyle,
+  textAlign: "left",
+  fontWeight: statut === "NON_LUE" ? 600 : 400,
+  color: "#1e293b",
+});
+
+const dateCellStyle: CSSProperties = {
+  ...tdStyle,
+  color: "#64748b",
+  fontSize: 13,
+};
+
+const emptyTableCellStyle: CSSProperties = {
+  textAlign: "center",
+  padding: 40,
+  color: "#94a3b8",
+};
+
+const actionsGroupStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "center",
+  gap: 6,
+};
+
+const viewButtonStyle: CSSProperties = {
+  background: "#eff6ff",
+  color: "#3b82f6",
+  border: "1px solid #bfdbfe",
+  padding: "6px 10px",
+  borderRadius: 6,
+  cursor: "pointer",
+};
+
+const readButtonStyle: CSSProperties = {
+  background: "#f0fdf4",
+  color: "#22c55e",
+  border: "1px solid #bbf7d0",
+  padding: "6px 10px",
+  borderRadius: 6,
+  cursor: "pointer",
+};
+
+const deleteButtonStyle: CSSProperties = {
+  background: "#fef2f2",
+  color: "#ef4444",
+  border: "1px solid #fecaca",
+  padding: "6px 10px",
+  borderRadius: 6,
+  cursor: "pointer",
+};
+
+const paginationStyle: CSSProperties = {
+  marginTop: 24,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: 12,
+};
+
+const pageButtonStyle: CSSProperties = {
+  padding: "8px 16px",
+  borderRadius: 8,
+  border: "1px solid #cbd5e1",
+  background: "#fff",
+  cursor: "pointer",
+};
+
+const pageIndicatorStyle: CSSProperties = {
+  fontSize: 14,
+  fontWeight: 600,
+  color: "#0f172a",
+};

@@ -7,29 +7,64 @@ export type TypeNotification =
   | "RAPPEL_ECHEANCE"
   | "INFORMATION_GENERALE";
 
-export type StatutNotification =
-  | "NON_LUE"
-  | "LUE"
-  | "ARCHIVEE";
+export type StatutNotification = "NON_LUE" | "LUE" | "ARCHIVEE";
 
 export interface NotificationDto {
-  id?: number;
+  id: number;
 
   titre: string;
   message: string;
 
   typeNotification: TypeNotification;
+  statut: StatutNotification;
 
-  statut?: StatutNotification;
+  dateCreation: string;
+  dateLecture?: string | null;
+  dateExpiration?: string | null;
 
-  dateCreation?: string; // ✅ IMPORTANT (tu l’utilises dans la liste)
-  dateLecture?: string;
-  dateExpiration?: string;
-
-  lienAction?: string;
-  envoyeeParEmail?: boolean;
+  lienAction?: string | null;
+  envoyeeParEmail: boolean;
 
   associationId: number;
   destinataireId: number;
   memberId?: number | null;
+}
+
+export interface CreateNotificationRequest {
+  titre: string;
+  message: string;
+
+  typeNotification: TypeNotification;
+
+  dateExpiration?: string | null;
+  lienAction?: string | null;
+
+  associationId: number;
+  destinataireId: number;
+  memberId?: number | null;
+}
+
+export interface NotificationFilter {
+  destinataireId?: number;
+  associationId?: number;
+  statut?: StatutNotification;
+  typeNotification?: TypeNotification;
+
+  page?: number;
+  size?: number;
+  sort?: string | string[];
+}
+
+export interface NotificationPageResponse {
+  content: NotificationDto[];
+
+  totalElements: number;
+  totalPages: number;
+
+  size: number;
+  number: number;
+
+  first: boolean;
+  last: boolean;
+  empty: boolean;
 }

@@ -1,143 +1,142 @@
-import { useEffect, useState } from "react";
-import { memberService } from "../api/memberService";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Member } from "../types/member";
+import type { Member, MemberFilter } from "../types/member";
+import { memberService } from "../api/memberService";
 import ConfirmModal from "../components/ConfirmModal";
-import { useWindowSize } from "../hooks/useWindowSize";
 import ExportPdfButton from "../components/ExportPdfButton";
+import { useWindowSize } from "../hooks/useWindowSize";
+
+interface DeleteModalState {
+  isOpen: boolean;
+  id: number | null;
+  label: string;
+}
+
+const PAGE_SIZE = 10;
 
 export default function MemberListPage() {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [filters, setFilters] = useState<any>({});
-  const [page, setPage] = useState(0);
-
+  const navigate = useNavigate();
   const { isMobile, isTablet } = useWindowSize();
 
-  const [modal, setModal] = useState<{
-    isOpen: boolean;
-    id: number | null;
-    label: string;
-  }>({
+  const [members, setMembers] = useState<Member[]>([]);
+  const [filters, setFilters] = useState<MemberFilter>({});
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [modal, setModal] = useState<DeleteModalState>({
     isOpen: false,
     id: null,
     label: "",
   });
 
-  const navigate = useNavigate();
-
-  const fetchData = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
-      const data = await memberService.getAll({
+      setIsLoading(true);
+
+      const response = await memberService.getAll({
         ...filters,
         page,
+        size: PAGE_SIZE,
+        sort: "lastName,asc",
       });
 
-      const content =
-        data?.content || (Array.isArray(data) ? data : []);
-
-      setMembers(content);
-    } catch (err) {
-      console.error(
-        "Erreur lors de la récupération des membres:",
-        err
-      );
-
+      setMembers(response.content);
+      setTotalPages(response.totalPages);
+    } catch (error) {
+      console.error("Failed to load members", error);
       setMembers([]);
+      setTotalPages(0);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, [filters, page]);
 
-  const handleDeleteClick = (
-    id: number,
-    name: string
-  ) =>
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  const updateFilter = (
+    key: keyof MemberFilter,
+    value: string | boolean | number | undefined
+  ) => {
+    setPage(0);
+
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [key]: value || undefined,
+    }));
+  };
+
+  const handleDeleteClick = (id: number, label: string) => {
     setModal({
       isOpen: true,
       id,
-      label: name,
+      label,
     });
-
-  const handleConfirmDelete = async () => {
-    if (!modal.id) return;
-
-    try {
-      await memberService.delete(modal.id);
-
-      setModal({
-        isOpen: false,
-        id: null,
-        label: "",
-      });
-
-      fetchData();
-    } catch (err) {
-      console.error("Erreur suppression:", err);
-
-      setModal({
-        isOpen: false,
-        id: null,
-        label: "",
-      });
-    }
   };
 
-  const handleCancelDelete = () =>
+  const handleCancelDelete = () => {
     setModal({
       isOpen: false,
       id: null,
       label: "",
     });
-
-  const pdfOptions = {
-    title: "Liste des membres",
-    subtitle: "Export complet des membres enregistrés",
-    filename: "membres",
-
-    columns: [
-      {
-        header: "Prénom",
-        accessor: (m: Member) =>
-          m.firstName ?? "—",
-        width: 1.2,
-      },
-      {
-        header: "Nom",
-        accessor: (m: Member) =>
-          m.lastName ?? "—",
-        width: 1.2,
-      },
-      {
-        header: "Email",
-        accessor: (m: Member) =>
-          m.email ?? "—",
-        width: 2,
-      },
-      {
-        header: "Téléphone",
-        accessor: (m: Member) =>
-          m.phone ?? "—",
-        width: 1.2,
-      },
-      {
-        header: "Association",
-        accessor: (m: Member) =>
-          (m as any).associationName ?? "—",
-        width: 1.5,
-      },
-    ],
-
-    data: members,
   };
 
+  const handleConfirmDelete = async () => {
+    if (modal.id === null) return;
+
+    try {
+      await memberService.remove(modal.id);
+
+      handleCancelDelete();
+      await fetchMembers();
+    } catch (error) {
+      console.error("Failed to delete member", error);
+      handleCancelDelete();
+    }
+  };
+
+  const pdfOptions = useMemo(
+    () => ({
+      title: "Liste des membres",
+      subtitle: "Export complet des membres enregistrés",
+      filename: "membres",
+      columns: [
+        {
+          header: "Prénom",
+          accessor: (member: Member) => member.firstName || "—",
+          width: 1.2,
+        },
+        {
+          header: "Nom",
+          accessor: (member: Member) => member.lastName || "—",
+          width: 1.2,
+        },
+        {
+          header: "Email",
+          accessor: (member: Member) => member.email || "—",
+          width: 2,
+        },
+        {
+          header: "Téléphone",
+          accessor: (member: Member) => member.phone || "—",
+          width: 1.2,
+        },
+        {
+          header: "Association",
+          accessor: (member: Member) => member.associationName || "—",
+          width: 1.5,
+        },
+      ],
+      data: members,
+    }),
+    [members]
+  );
+
   return (
-    <div
-      style={{
-        padding: isMobile ? "12px" : "20px",
-      }}
-    >
+    <div style={{ padding: isMobile ? "12px" : "20px" }}>
       <ConfirmModal
         isOpen={modal.isOpen}
         title="Supprimer le membre"
@@ -148,33 +147,17 @@ export default function MemberListPage() {
         onCancel={handleCancelDelete}
       />
 
-      {/* ✅ BREADCRUMB */}
       <nav style={breadcrumbStyle}>
-        <span
-          style={breadcrumbHome}
-          onClick={() => navigate("/")}
-        >
+        <span style={breadcrumbHome} onClick={() => navigate("/")}>
           🏠 Accueil
         </span>
 
         <span style={breadcrumbSeparator}>›</span>
 
-        <span style={breadcrumbCurrent}>
-          Membres
-        </span>
+        <span style={breadcrumbCurrent}>Membres</span>
       </nav>
 
-      {/* HEADER */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
+      <div style={headerStyle}>
         <h2
           style={{
             color: "#2c3e50",
@@ -185,218 +168,92 @@ export default function MemberListPage() {
           👥 Membres
         </h2>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-          }}
-        >
-          <ExportPdfButton
-            isMobile={isMobile}
-            options={pdfOptions}
-          />
+        <div style={headerActionsStyle}>
+          <ExportPdfButton isMobile={isMobile} options={pdfOptions} />
 
-          <button
-            style={btnAdd}
-            onClick={() =>
-              navigate("/members/new")
-            }
-          >
-            {isMobile
-              ? "➕"
-              : "➕ Ajouter un membre"}
+          <button style={btnAdd} onClick={() => navigate("/members/new")}>
+            {isMobile ? "➕" : "➕ Ajouter un membre"}
           </button>
         </div>
       </div>
 
-      {/* FILTRES */}
       <div
         style={{
           marginBottom: 16,
           display: "flex",
           gap: 10,
           flexWrap: "wrap",
-          flexDirection: isMobile
-            ? "column"
-            : "row",
+          flexDirection: isMobile ? "column" : "row",
         }}
       >
         <input
           placeholder="Prénom"
-          style={{
-            ...inputStyle,
-            flex: 1,
-          }}
-          onChange={(e) => {
-            setPage(0);
-
-            setFilters({
-              ...filters,
-              firstName: e.target.value,
-            });
-          }}
+          style={{ ...inputStyle, flex: 1 }}
+          value={filters.firstName ?? ""}
+          onChange={(event) => updateFilter("firstName", event.target.value)}
         />
 
         <input
           placeholder="Nom"
-          style={{
-            ...inputStyle,
-            flex: 1,
-          }}
-          onChange={(e) => {
-            setPage(0);
-
-            setFilters({
-              ...filters,
-              lastName: e.target.value,
-            });
-          }}
+          style={{ ...inputStyle, flex: 1 }}
+          value={filters.lastName ?? ""}
+          onChange={(event) => updateFilter("lastName", event.target.value)}
         />
 
         {!isMobile && (
           <input
             placeholder="Email"
-            style={{
-              ...inputStyle,
-              flex: 1,
-            }}
-            onChange={(e) => {
-              setPage(0);
-
-              setFilters({
-                ...filters,
-                email: e.target.value,
-              });
-            }}
+            style={{ ...inputStyle, flex: 1 }}
+            value={filters.email ?? ""}
+            onChange={(event) => updateFilter("email", event.target.value)}
           />
         )}
-
-        <button
-          style={btnPrimary}
-          onClick={fetchData}
-        >
-          {isMobile ? "🔍" : "🔍 Filtrer"}
-        </button>
       </div>
 
-      {/* MOBILE */}
-      {isMobile ? (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
+      {isLoading ? (
+        <p style={emptyStateStyle}>Chargement des membres...</p>
+      ) : isMobile ? (
+        <div style={mobileListStyle}>
           {members.length === 0 ? (
-            <p
-              style={{
-                textAlign: "center",
-                color: "#9ca3af",
-                padding: "20px",
-              }}
-            >
-              Aucun membre trouvé
-            </p>
+            <p style={emptyStateStyle}>Aucun membre trouvé</p>
           ) : (
-            members.map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  background: "#fff",
-                  borderRadius: 10,
-                  padding: 14,
-                  border: "1px solid #eee",
-                  boxShadow:
-                    "0 1px 4px rgba(0,0,0,0.06)",
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 15,
-                    marginBottom: 4,
-                  }}
-                >
-                  {m.firstName} {m.lastName}
+            members.map((member) => (
+              <div key={member.id} style={mobileCardStyle}>
+                <div style={mobileCardTitleStyle}>
+                  {member.firstName} {member.lastName}
                 </div>
 
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "#6b7280",
-                    marginBottom: 2,
-                  }}
-                >
-                  📧 {m.email}
-                </div>
+                <div style={mobileCardTextStyle}>📧 {member.email}</div>
 
-                {m.phone && (
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "#6b7280",
-                      marginBottom: 2,
-                    }}
-                  >
-                    📞 {m.phone}
+                <div style={mobileCardTextStyle}>📞 {member.phone}</div>
+
+                {member.associationName && (
+                  <div style={mobileCardAssociationStyle}>
+                    🏢 {member.associationName}
                   </div>
                 )}
 
-                {(m as any).associationName && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#9ca3af",
-                      marginBottom: 10,
-                    }}
-                  >
-                    🏢 {(m as any).associationName}
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    marginTop: 8,
-                  }}
-                >
+                <div style={mobileActionsStyle}>
                   <button
-                    style={{
-                      ...btnView,
-                      flex: 1,
-                    }}
-                    onClick={() =>
-                      navigate(`/members/${m.id}`)
-                    }
+                    style={{ ...btnView, flex: 1 }}
+                    onClick={() => navigate(`/members/${member.id}`)}
                   >
                     👁️
                   </button>
 
                   <button
-                    style={{
-                      ...btnEdit,
-                      flex: 1,
-                    }}
-                    onClick={() =>
-                      navigate(
-                        `/members/${m.id}/edit`
-                      )
-                    }
+                    style={{ ...btnEdit, flex: 1 }}
+                    onClick={() => navigate(`/members/${member.id}/edit`)}
                   >
                     ✏️
                   </button>
 
                   <button
-                    style={{
-                      ...btnDelete,
-                      flex: 1,
-                    }}
+                    style={{ ...btnDelete, flex: 1 }}
                     onClick={() =>
                       handleDeleteClick(
-                        m.id!,
-                        `${m.firstName} ${m.lastName}`
+                        member.id,
+                        `${member.firstName} ${member.lastName}`
                       )
                     }
                   >
@@ -408,114 +265,53 @@ export default function MemberListPage() {
           )}
         </div>
       ) : (
-        // DESKTOP/TABLET
-        <div
-          style={{
-            overflowX: "auto",
-            background: "white",
-            borderRadius: "8px",
-            boxShadow:
-              "0 2px 8px rgba(0,0,0,0.08)",
-          }}
-        >
+        <div style={tableContainerStyle}>
           <table style={tableStyle}>
             <thead>
-              <tr
-                style={{
-                  background: "#3498db",
-                  color: "white",
-                }}
-              >
-                <th style={thStyle}>
-                  Nom complet
-                </th>
+              <tr style={tableHeaderRowStyle}>
+                <th style={thStyle}>Nom complet</th>
+                <th style={thStyle}>Email</th>
 
-                <th style={thStyle}>
-                  Email
-                </th>
+                {!isTablet && <th style={thStyle}>Téléphone</th>}
+                {!isTablet && <th style={thStyle}>Association</th>}
 
-                {!isTablet && (
-                  <th style={thStyle}>
-                    Téléphone
-                  </th>
-                )}
-
-                {!isTablet && (
-                  <th style={thStyle}>
-                    Association
-                  </th>
-                )}
-
-                <th style={thStyle}>
-                  Actions
-                </th>
+                <th style={thStyle}>Actions</th>
               </tr>
             </thead>
 
             <tbody>
               {members.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={5}
-                    style={{
-                      textAlign: "center",
-                      padding: 40,
-                      color: "#9ca3af",
-                    }}
-                  >
+                  <td colSpan={isTablet ? 3 : 5} style={emptyTableCellStyle}>
                     Aucun membre trouvé
                   </td>
                 </tr>
               ) : (
-                members.map((m) => (
-                  <tr
-                    key={m.id}
-                    style={{
-                      textAlign: "center",
-                      borderBottom:
-                        "1px solid #eee",
-                    }}
-                  >
+                members.map((member) => (
+                  <tr key={member.id} style={tableRowStyle}>
                     <td style={tdStyle}>
-                      {m.firstName} {m.lastName}
+                      {member.firstName} {member.lastName}
                     </td>
 
-                    <td style={tdStyle}>
-                      {m.email}
-                    </td>
+                    <td style={tdStyle}>{member.email}</td>
+
+                    {!isTablet && <td style={tdStyle}>{member.phone}</td>}
 
                     {!isTablet && (
-                      <td style={tdStyle}>
-                        {m.phone || "—"}
-                      </td>
-                    )}
-
-                    {!isTablet && (
-                      <td style={tdStyle}>
-                        {(m as any)
-                          .associationName || "—"}
-                      </td>
+                      <td style={tdStyle}>{member.associationName || "—"}</td>
                     )}
 
                     <td style={tdStyle}>
                       <button
                         style={btnView}
-                        onClick={() =>
-                          navigate(
-                            `/members/${m.id}`
-                          )
-                        }
+                        onClick={() => navigate(`/members/${member.id}`)}
                       >
                         👁️
                       </button>
 
                       <button
                         style={btnEdit}
-                        onClick={() =>
-                          navigate(
-                            `/members/${m.id}/edit`
-                          )
-                        }
+                        onClick={() => navigate(`/members/${member.id}/edit`)}
                       >
                         ✏️
                       </button>
@@ -524,8 +320,8 @@ export default function MemberListPage() {
                         style={btnDelete}
                         onClick={() =>
                           handleDeleteClick(
-                            m.id!,
-                            `${m.firstName} ${m.lastName}`
+                            member.id,
+                            `${member.firstName} ${member.lastName}`
                           )
                         }
                       >
@@ -540,21 +336,10 @@ export default function MemberListPage() {
         </div>
       )}
 
-      {/* PAGINATION */}
-      <div
-        style={{
-          marginTop: 16,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
+      <div style={paginationStyle}>
         <button
           style={btnPage}
-          onClick={() =>
-            setPage(page - 1)
-          }
+          onClick={() => setPage((currentPage) => currentPage - 1)}
           disabled={page === 0}
         >
           ⬅
@@ -566,14 +351,13 @@ export default function MemberListPage() {
             fontWeight: 600,
           }}
         >
-          Page {page + 1}
+          Page {page + 1} / {Math.max(totalPages, 1)}
         </span>
 
         <button
           style={btnPage}
-          onClick={() =>
-            setPage(page + 1)
-          }
+          onClick={() => setPage((currentPage) => currentPage + 1)}
+          disabled={totalPages === 0 || page + 1 >= totalPages}
         >
           ➡
         </button>
@@ -581,8 +365,6 @@ export default function MemberListPage() {
     </div>
   );
 }
-
-// --- STYLES ---
 
 const breadcrumbStyle: React.CSSProperties = {
   display: "flex",
@@ -611,22 +393,27 @@ const breadcrumbCurrent: React.CSSProperties = {
   fontWeight: 600,
 };
 
-const inputStyle = {
+const headerStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 16,
+  gap: 12,
+  flexWrap: "wrap",
+};
+
+const headerActionsStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 8,
+};
+
+const inputStyle: React.CSSProperties = {
   padding: "8px",
   borderRadius: "6px",
   border: "1px solid #ccc",
-} as React.CSSProperties;
+};
 
-const btnPrimary = {
-  padding: "8px 12px",
-  background: "#3498db",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-} as React.CSSProperties;
-
-const btnAdd = {
+const btnAdd: React.CSSProperties = {
   padding: "10px 16px",
   background: "#2ecc71",
   color: "white",
@@ -634,9 +421,9 @@ const btnAdd = {
   borderRadius: "6px",
   cursor: "pointer",
   fontWeight: 600,
-} as React.CSSProperties;
+};
 
-const btnView = {
+const btnView: React.CSSProperties = {
   marginRight: 5,
   background: "#3498db",
   color: "white",
@@ -644,9 +431,9 @@ const btnView = {
   padding: "6px 8px",
   borderRadius: "5px",
   cursor: "pointer",
-} as React.CSSProperties;
+};
 
-const btnEdit = {
+const btnEdit: React.CSSProperties = {
   marginRight: 5,
   background: "#27ae60",
   color: "white",
@@ -654,35 +441,110 @@ const btnEdit = {
   padding: "6px 8px",
   borderRadius: "5px",
   cursor: "pointer",
-} as React.CSSProperties;
+};
 
-const btnDelete = {
+const btnDelete: React.CSSProperties = {
   background: "#e74c3c",
   color: "white",
   border: "none",
   padding: "6px 8px",
   borderRadius: "5px",
   cursor: "pointer",
-} as React.CSSProperties;
+};
 
-const btnPage = {
+const btnPage: React.CSSProperties = {
   padding: "6px 12px",
   borderRadius: "6px",
   border: "1px solid #ccc",
   cursor: "pointer",
   background: "white",
-} as React.CSSProperties;
-
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse" as const,
 };
 
-const thStyle = {
+const mobileListStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+};
+
+const mobileCardStyle: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: 10,
+  padding: 14,
+  border: "1px solid #eee",
+  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+};
+
+const mobileCardTitleStyle: React.CSSProperties = {
+  fontWeight: 600,
+  fontSize: 15,
+  marginBottom: 4,
+};
+
+const mobileCardTextStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: "#6b7280",
+  marginBottom: 2,
+};
+
+const mobileCardAssociationStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "#9ca3af",
+  marginBottom: 10,
+};
+
+const mobileActionsStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 8,
+  marginTop: 8,
+};
+
+const tableContainerStyle: React.CSSProperties = {
+  overflowX: "auto",
+  background: "white",
+  borderRadius: "8px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+};
+
+const tableStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const tableHeaderRowStyle: React.CSSProperties = {
+  background: "#3498db",
+  color: "white",
+};
+
+const thStyle: React.CSSProperties = {
   padding: "12px 16px",
   fontWeight: 600,
-} as React.CSSProperties;
+};
 
-const tdStyle = {
+const tableRowStyle: React.CSSProperties = {
+  textAlign: "center",
+  borderBottom: "1px solid #eee",
+};
+
+const tdStyle: React.CSSProperties = {
   padding: "10px 16px",
-} as React.CSSProperties;
+};
+
+const emptyStateStyle: React.CSSProperties = {
+  textAlign: "center",
+  color: "#9ca3af",
+  padding: "20px",
+};
+
+const emptyTableCellStyle: React.CSSProperties = {
+  textAlign: "center",
+  padding: 40,
+  color: "#9ca3af",
+};
+
+const paginationStyle: React.CSSProperties = {
+  marginTop: 16,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: 10,
+};

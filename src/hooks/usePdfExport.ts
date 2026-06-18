@@ -44,17 +44,17 @@ export function usePdfExport() {
 
     let y = MARGIN;
 
-    // Barre bleue
+    // Top accent bar
     ctx.fillStyle = "#1d4ed8";
     ctx.fillRect(0, 0, PAGE_W, 6);
 
-    // Titre
+    // Title
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 24px system-ui, sans-serif";
     ctx.fillText(title, MARGIN, y + 34);
     y += 44;
 
-    // Sous-titre
+    // Subtitle
     if (subtitle) {
       ctx.fillStyle = "#64748b";
       ctx.font = "14px system-ui, sans-serif";
@@ -62,23 +62,23 @@ export function usePdfExport() {
       y += 20;
     }
 
-    // Date
+    // Export date
     ctx.fillStyle = "#94a3b8";
     ctx.font = "12px system-ui, sans-serif";
     const now = new Date().toLocaleDateString("fr-FR", {
       day: "2-digit", month: "long", year: "numeric",
       hour: "2-digit", minute: "2-digit",
     });
-    ctx.fillText(`Exporté le ${now}`, MARGIN, y + 4);
+    ctx.fillText(`Exported on ${now}`, MARGIN, y + 4);
     y += 20;
 
-    // Nb entrées
+    // Entry count
     ctx.fillStyle = "#475569";
     ctx.font = "13px system-ui, sans-serif";
-    ctx.fillText(`${data.length} entrée${data.length !== 1 ? "s" : ""}`, MARGIN, y + 4);
+    ctx.fillText(`${data.length} entr${data.length !== 1 ? "ies" : "y"}`, MARGIN, y + 4);
     y += 24;
 
-    // Séparateur
+    // Separator line
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -87,7 +87,7 @@ export function usePdfExport() {
     ctx.stroke();
     y += 16;
 
-    // En-tête tableau
+    // Table header
     ctx.fillStyle = "#1e3a5f";
     ctx.fillRect(MARGIN, y, tableW, HEADER_H);
     ctx.fillStyle = "#ffffff";
@@ -99,7 +99,7 @@ export function usePdfExport() {
     });
     y += HEADER_H;
 
-    // Lignes de données
+    // Data rows
     data.forEach((row, rowIdx) => {
       ctx.fillStyle = rowIdx % 2 === 0 ? "#f8fafc" : "#ffffff";
       ctx.fillRect(MARGIN, y, tableW, ROW_H);
@@ -128,6 +128,7 @@ export function usePdfExport() {
 
       y += ROW_H;
 
+      // Page break handling
       if (y + ROW_H > PAGE_H * Math.ceil(y / PAGE_H) - MARGIN) {
         const nextPage = Math.ceil((y + 1) / PAGE_H);
         y = PAGE_H * nextPage + MARGIN;
@@ -136,18 +137,18 @@ export function usePdfExport() {
       }
     });
 
-    // Pied de page
+    // Footer
     for (let p = 0; p < pages; p++) {
       const footerY = PAGE_H * (p + 1) - 20;
       ctx.fillStyle = "#94a3b8";
       ctx.font = "11px system-ui, sans-serif";
-      ctx.fillText("GestAssoc — Export automatique", MARGIN, footerY);
+      ctx.fillText("GestAssoc — Automatic Export", MARGIN, footerY);
       ctx.textAlign = "right";
       ctx.fillText(`Page ${p + 1} / ${pages}`, PAGE_W - MARGIN, footerY);
       ctx.textAlign = "left";
     }
 
-    // Téléchargement
+    // Download
     const link = document.createElement("a");
     link.download = `${filename ?? title.toLowerCase().replace(/\s+/g, "_")}_${Date.now()}.png`;
     canvas.toBlob((blob) => {

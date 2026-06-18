@@ -29,7 +29,7 @@ export default function Breadcrumb() {
 
   const segments = location.pathname.split("/").filter(Boolean);
 
-  // Construire les étapes du breadcrumb
+  // Build breadcrumb steps
   const crumbs: { label: string; path: string }[] = [
     { label: "Accueil", path: "/" },
   ];
@@ -43,7 +43,7 @@ export default function Breadcrumb() {
     crumbs.push({ label, path });
   });
 
-  // Une seule étape = on est sur l'accueil, pas besoin d'afficher
+  // Single step = we're on the home page, no need to display
   if (crumbs.length <= 1) return null;
 
   return (

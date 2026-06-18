@@ -1,52 +1,52 @@
-import axios from "./axiosConfig";
-import type { StatutMembre } from "../types/memberHistory";
+import api from "./axiosConfig";
+import type {
+  CreateMemberHistoryRequest,
+  MemberHistoryDto,
+  MemberHistoryFilter,
+  MemberHistoryPageResponse,
+} from "../types/memberHistory";
 
-export interface MemberHistory {
-  id?: number;
-  ancienStatut?: StatutMembre;
-  nouveauStatut: StatutMembre;
-  motif?: string;
-  dateChangement?: string;
-  memberId: number;
-  associationId: number;
-  modifieParId?: number;
-}
+const BASE_URL = "/v1/member-histories";
 
-export interface PageResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-}
-
-const BASE_URL = "/v1/member-histories"
-
-export const getMemberHistories = async (params: {
-  memberId?: number;
-  associationId?: number;
-  nouveauStatut?: StatutMembre;
-  modifieParId?: number;
-  page?: number;
-  size?: number;
-}) => {
-  const response = await axios.get<PageResponse<MemberHistory>>(BASE_URL, {
+export async function getMemberHistories(
+  params: MemberHistoryFilter = {}
+): Promise<MemberHistoryPageResponse> {
+  const { data } = await api.get<MemberHistoryPageResponse>(BASE_URL, {
     params,
   });
-  return response.data;
-};
 
-export const getMemberHistoryById = async (id: number) => {
-  const response = await axios.get<MemberHistory>(`${BASE_URL}/${id}`);
-  return response.data;
-};
+  return data;
+}
 
-export const createMemberHistory = async (data: MemberHistory) => {
-  const response = await axios.post<MemberHistory>(BASE_URL, data);
-  return response.data;
-};
+export async function getMemberHistoryById(
+  id: number
+): Promise<MemberHistoryDto> {
+  const { data } = await api.get<MemberHistoryDto>(`${BASE_URL}/${id}`);
+  return data;
+}
 
-export const deleteMemberHistory = async (id: number) => {
-  const response = await axios.delete<MemberHistory>(`${BASE_URL}/${id}`);
-  return response.data;
+/**
+ * Creates an immutable member status history entry.
+ * The modifier user is always resolved server-side from the security context.
+ */
+export async function createMemberHistory(
+  payload: CreateMemberHistoryRequest
+): Promise<MemberHistoryDto> {
+  const { data } = await api.post<MemberHistoryDto>(BASE_URL, payload);
+  return data;
+}
+
+/**
+ * Deletes a member history entry.
+ * Backend returns HTTP 204 No Content.
+ */
+export async function deleteMemberHistory(id: number): Promise<void> {
+  await api.delete<void>(`${BASE_URL}/${id}`);
+}
+
+export const memberHistoryService = {
+  getMemberHistories,
+  getMemberHistoryById,
+  createMemberHistory,
+  deleteMemberHistory,
 };

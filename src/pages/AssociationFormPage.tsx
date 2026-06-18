@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAssociationById, createAssociation, updateAssociation } from '../api/associationService';
+import type { AssociationInput } from '../types/association';
 
 export default function AssociationFormPage() {
   const { id } = useParams();
@@ -11,10 +12,11 @@ export default function AssociationFormPage() {
   const [description, setDescription] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isEdit) return;
+    if (!id) return;
 
     const fetchData = async () => {
       try {
@@ -23,7 +25,9 @@ export default function AssociationFormPage() {
         setDescription(data.description ?? '');
         setCity(data.city ?? '');
       } catch {
-        setError('Erreur lors du chargement');
+        setError('Erreur lors du chargement de l\'association');
+      } finally {
+        setFetching(false);
       }
     };
 
@@ -35,153 +39,167 @@ export default function AssociationFormPage() {
     setLoading(true);
     setError(null);
 
+    // Avoid persisting empty strings: send undefined so optional fields
+    // remain null on the backend when left blank.
+    const payload: AssociationInput = {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      city: city.trim() || undefined,
+    };
+
     try {
-      if (isEdit) {
-        await updateAssociation(Number(id), { name, description, city });
+      if (isEdit && id) {
+        await updateAssociation(Number(id), payload);
         navigate(`/associations/${id}`);
       } else {
-        await createAssociation({ name, description, city });
-        navigate('/associations');
+        const created = await createAssociation(payload);
+        navigate(`/associations/${created.id}`);
       }
     } catch {
-      setError('Erreur lors de la sauvegarde');
+      setError('Erreur lors de la sauvegarde. Veuillez vérifier les champs et réessayer.');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div style={container}>
-      <div style={card}>
+  if (fetching) return <p style={st.message}>Chargement...</p>;
 
-        <button style={btnBack} onClick={() => navigate(-1)}>
+  return (
+    <div style={st.container}>
+      <div style={st.card}>
+        <button type="button" style={st.btnBack} onClick={() => navigate(-1)}>
           ← Retour
         </button>
 
-        {/* ✅ TITRE CORRIGÉ */}
-        <h1 style={title}>
-          {isEdit ? "✏️ Modifier une association" : "➕ Créer une association"}
+        <h1 style={st.title}>
+          {isEdit ? 'Modifier une association' : 'Créer une association'}
         </h1>
 
-        {error && <p style={errorStyle}>{error}</p>}
+        {error && <p style={st.error}>{error}</p>}
 
-        <form onSubmit={handleSubmit} style={formStyle}>
-
+        <form onSubmit={handleSubmit} style={st.form}>
           <div>
-            <label style={label}>Nom *</label>
+            <label htmlFor="assoc-name" style={st.label}>Nom *</label>
             <input
+              id="assoc-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              style={input}
+              style={st.input}
             />
           </div>
 
           <div>
-            <label style={label}>Description</label>
+            <label htmlFor="assoc-description" style={st.label}>Description</label>
             <textarea
+              id="assoc-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              style={input}
+              style={st.input}
             />
           </div>
 
           <div>
-            <label style={label}>Ville</label>
+            <label htmlFor="assoc-city" style={st.label}>Ville</label>
             <input
+              id="assoc-city"
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              style={input}
+              style={st.input}
             />
           </div>
 
-          <button type="submit" disabled={loading} style={btnSave}>
-            {loading
-              ? "⏳ Sauvegarde..."
-              : isEdit
-              ? "💾 Mettre à jour"
-              : "✅ Créer"}
+          <button type="submit" disabled={loading} style={st.btnSave}>
+            {loading ? 'Sauvegarde en cours...' : isEdit ? 'Mettre à jour' : 'Créer'}
           </button>
-
         </form>
       </div>
     </div>
   );
 }
 
-/* 🎨 STYLES */
-
-const container = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  height: "90vh",
-  background: "#f4f6f9",
-};
-
-const card = {
-  background: "white",
-  padding: "30px",
-  borderRadius: "12px",
-  boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-  width: "400px",
-};
-
-const title = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "10px",
-  fontSize: "26px",           // ✅ taille corrigée
-  fontWeight: "bold",
-  color: "#2c3e50",           // ✅ couleur pro
-  borderBottom: "2px solid #27ae60", // petite ligne verte stylée
-  paddingBottom: "10px",
-  marginBottom: "20px",
-};
-
-const formStyle = {
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "15px",
-};
-
-const label = {
-  fontWeight: "bold",
-  marginBottom: "5px",
-  display: "block",
-};
-
-const input = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-};
-
-const btnSave = {
-  padding: "12px",
-  background: "#27ae60",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-  fontSize: "16px",
-};
-
-const btnBack = {
-  marginBottom: "10px",
-  background: "#bdc3c7",
-  border: "none",
-  padding: "6px 10px",
-  borderRadius: "6px",
-  cursor: "pointer",
-};
-
-const errorStyle = {
-  color: "red",
-  textAlign: "center" as const,
+const st: Record<string, React.CSSProperties> = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '90vh',
+    background: '#F5F5F3',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  card: {
+    background: '#fff',
+    padding: '30px',
+    borderRadius: '12px',
+    border: '0.5px solid #e0e0e0',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+    width: '420px',
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 500,
+    color: '#1a1a1a',
+    borderBottom: '2px solid #185FA5',
+    paddingBottom: '12px',
+    marginBottom: '20px',
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  label: {
+    fontWeight: 500,
+    fontSize: '13px',
+    color: '#555',
+    marginBottom: '6px',
+    display: 'block',
+  },
+  input: {
+    width: '100%',
+    padding: '10px',
+    borderRadius: '8px',
+    border: '0.5px solid #ccc',
+    fontSize: '14px',
+    boxSizing: 'border-box',
+    fontFamily: 'inherit',
+  },
+  btnSave: {
+    padding: '12px',
+    background: '#185FA5',
+    color: '#E6F1FB',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 500,
+  },
+  btnBack: {
+    marginBottom: '16px',
+    background: '#f5f5f5',
+    color: '#333',
+    border: '0.5px solid #ccc',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '13px',
+  },
+  error: {
+    color: '#A32D2D',
+    background: '#FCEBEB',
+    border: '0.5px solid #F7C1C1',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    marginBottom: '16px',
+  },
+  message: {
+    textAlign: 'center',
+    marginTop: '2rem',
+    color: '#555',
+    fontSize: '15px',
+  },
 };

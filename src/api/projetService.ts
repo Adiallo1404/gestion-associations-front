@@ -1,122 +1,156 @@
-import api from './axiosConfig'
-import type { ProjetDto, DepenseProjetDto, PartenaireProjetDto, ProjetPage, ProjetFilter } from '../types/projet'
+import api from "./axiosConfig";
+import type {
+  CreateDepenseProjetRequest,
+  CreatePartenaireProjetRequest,
+  CreateProjetRequest,
+  DepenseProjetDto,
+  PartenaireProjetDto,
+  ProjetDto,
+  ProjetFilter,
+  ProjetPageResponse,
+  UpdateDepenseProjetRequest,
+  UpdatePartenaireProjetRequest,
+  UpdateProjetRequest,
+} from "../types/projet";
 
-// ✅ BASE URL correspondant à ton Controller Spring Boot
-const BASE = '/v1/projets'
+const BASE_URL = "/v1/projets";
 
-// ── Projets ──────────────────────────────────────────────────────────────
+// ─── Projets ─────────────────────────────────────────────────────────────────
 
-/**
- * Liste les projets avec filtres et pagination (Spring Data Page)
- */
 export async function getProjetsByFilters(
-  filter: ProjetFilter,
+  filter: ProjetFilter = {},
   page = 0,
-  size = 10
-): Promise<ProjetPage> {
-  // On regroupe les filtres et les paramètres de pagination
-  const params = {
-    ...filter,
-    page,
-    size
-  }
-  const response = await api.get<ProjetPage>(BASE, { params })
-  return response.data
+  size = 10,
+  sort?: string | string[]
+): Promise<ProjetPageResponse> {
+  const { data } = await api.get<ProjetPageResponse>(BASE_URL, {
+    params: {
+      ...filter,
+      page,
+      size,
+      sort,
+    },
+  });
+
+  return data;
 }
 
-/**
- * Récupère un projet par son ID (inclut les dépenses et partenaires associés)
- */
 export async function getProjetById(id: number): Promise<ProjetDto> {
-  const response = await api.get<ProjetDto>(`${BASE}/${id}`)
-  return response.data
+  const { data } = await api.get<ProjetDto>(`${BASE_URL}/${id}`);
+  return data;
 }
 
-/**
- * Crée un nouveau projet
- */
-export async function createProjet(data: ProjetDto): Promise<ProjetDto> {
-  const response = await api.post<ProjetDto>(BASE, data)
-  return response.data
+export async function createProjet(
+  payload: CreateProjetRequest
+): Promise<ProjetDto> {
+  const { data } = await api.post<ProjetDto>(BASE_URL, payload);
+  return data;
 }
 
-/**
- * Met à jour un projet existant
- */
-export async function updateProjet(id: number, data: ProjetDto): Promise<ProjetDto> {
-  const response = await api.put<ProjetDto>(`${BASE}/${id}`, data)
-  return response.data
+export async function updateProjet(
+  id: number,
+  payload: UpdateProjetRequest
+): Promise<ProjetDto> {
+  const { data } = await api.put<ProjetDto>(`${BASE_URL}/${id}`, payload);
+  return data;
 }
 
-/**
- * Supprime un projet
- */
 export async function deleteProjet(id: number): Promise<void> {
-  await api.delete(`${BASE}/${id}`)
+  await api.delete<void>(`${BASE_URL}/${id}`);
 }
 
-// ── Dépenses ─────────────────────────────────────────────────────────────
+// ─── Dépenses projet ─────────────────────────────────────────────────────────
 
-/**
- * Liste toutes les dépenses rattachées à un projet spécifique
- */
-export async function getDepensesByProjet(projetId: number): Promise<DepenseProjetDto[]> {
-  const response = await api.get<DepenseProjetDto[]>(`${BASE}/${projetId}/depenses`)
-  return response.data
+export async function getDepensesByProjet(
+  projetId: number
+): Promise<DepenseProjetDto[]> {
+  const { data } = await api.get<DepenseProjetDto[]>(
+    `${BASE_URL}/${projetId}/depenses`
+  );
+
+  return data;
 }
 
-/**
- * Ajoute une dépense à un projet
- */
-export async function addDepense(projetId: number, data: DepenseProjetDto): Promise<DepenseProjetDto> {
-  const response = await api.post<DepenseProjetDto>(`${BASE}/${projetId}/depenses`, data)
-  return response.data
+export async function addDepense(
+  projetId: number,
+  payload: CreateDepenseProjetRequest
+): Promise<DepenseProjetDto> {
+  const { data } = await api.post<DepenseProjetDto>(
+    `${BASE_URL}/${projetId}/depenses`,
+    payload
+  );
+
+  return data;
 }
 
-/**
- * Modifie une dépense existante
- */
-export async function updateDepense(depenseId: number, data: DepenseProjetDto): Promise<DepenseProjetDto> {
-  const response = await api.put<DepenseProjetDto>(`${BASE}/depenses/${depenseId}`, data)
-  return response.data
+export async function updateDepense(
+  depenseId: number,
+  payload: UpdateDepenseProjetRequest
+): Promise<DepenseProjetDto> {
+  const { data } = await api.put<DepenseProjetDto>(
+    `${BASE_URL}/depenses/${depenseId}`,
+    payload
+  );
+
+  return data;
 }
 
-/**
- * Supprime une dépense
- */
 export async function deleteDepense(depenseId: number): Promise<void> {
-  await api.delete(`${BASE}/depenses/${depenseId}`)
+  await api.delete<void>(`${BASE_URL}/depenses/${depenseId}`);
 }
 
-// ── Partenaires ──────────────────────────────────────────────────────────
+// ─── Partenaires projet ──────────────────────────────────────────────────────
 
-/**
- * Liste tous les partenaires rattachés à un projet
- */
-export async function getPartenairesByProjet(projetId: number): Promise<PartenaireProjetDto[]> {
-  const response = await api.get<PartenaireProjetDto[]>(`${BASE}/${projetId}/partenaires`)
-  return response.data
+export async function getPartenairesByProjet(
+  projetId: number
+): Promise<PartenaireProjetDto[]> {
+  const { data } = await api.get<PartenaireProjetDto[]>(
+    `${BASE_URL}/${projetId}/partenaires`
+  );
+
+  return data;
 }
 
-/**
- * Ajoute un partenaire à un projet
- */
-export async function addPartenaire(projetId: number, data: PartenaireProjetDto): Promise<PartenaireProjetDto> {
-  const response = await api.post<PartenaireProjetDto>(`${BASE}/${projetId}/partenaires`, data)
-  return response.data
+export async function addPartenaire(
+  projetId: number,
+  payload: CreatePartenaireProjetRequest
+): Promise<PartenaireProjetDto> {
+  const { data } = await api.post<PartenaireProjetDto>(
+    `${BASE_URL}/${projetId}/partenaires`,
+    payload
+  );
+
+  return data;
 }
 
-/**
- * Modifie les informations d'un partenaire lié
- */
-export async function updatePartenaire(partenaireId: number, data: PartenaireProjetDto): Promise<PartenaireProjetDto> {
-  const response = await api.put<PartenaireProjetDto>(`${BASE}/partenaires/${partenaireId}`, data)
-  return response.data
+export async function updatePartenaire(
+  partenaireId: number,
+  payload: UpdatePartenaireProjetRequest
+): Promise<PartenaireProjetDto> {
+  const { data } = await api.put<PartenaireProjetDto>(
+    `${BASE_URL}/partenaires/${partenaireId}`,
+    payload
+  );
+
+  return data;
 }
 
-/**
- * Supprime un partenaire d'un projet
- */
 export async function deletePartenaire(partenaireId: number): Promise<void> {
-  await api.delete(`${BASE}/partenaires/${partenaireId}`)
+  await api.delete<void>(`${BASE_URL}/partenaires/${partenaireId}`);
 }
+
+export const projetService = {
+  getProjetsByFilters,
+  getProjetById,
+  createProjet,
+  updateProjet,
+  deleteProjet,
+  getDepensesByProjet,
+  addDepense,
+  updateDepense,
+  deleteDepense,
+  getPartenairesByProjet,
+  addPartenaire,
+  updatePartenaire,
+  deletePartenaire,
+};

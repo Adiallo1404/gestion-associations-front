@@ -1,12 +1,48 @@
-import { useEffect, useState } from "react";
-import { notificationService } from "../api/notificationService";
-import { getAssociations } from "../api/associationService";
-import { memberService } from "../api/memberService";
-import { getUsers } from "../api/userService";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useState,
+  type CSSProperties,
+} from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { getAssociations } from "../api/associationService";
+import { memberService } from "../api/memberService";
+import { notificationService } from "../api/notificationService";
+import { getUsers } from "../api/userService";
+import type {
+  CreateNotificationRequest,
+  TypeNotification,
+} from "../types/notification";
+import type { Member } from "../types/member";
 
-const TYPE_OPTIONS = [
+interface AssociationOption {
+  id: number;
+  name: string;
+}
+
+interface UserOption {
+  id: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  username?: string | null;
+}
+
+interface NotificationFormState {
+  titre: string;
+  message: string;
+  typeNotification: TypeNotification;
+  associationId: string;
+  destinataireId: string;
+  memberId: string;
+  lienAction: string;
+  dateExpiration: string;
+}
+
+const TYPE_OPTIONS: { value: TypeNotification; label: string }[] = [
   { value: "RELANCE_COTISATION", label: "Relance cotisation" },
   { value: "COTISATION_PAYEE", label: "Cotisation payée" },
   { value: "NOUVEAU_MEMBRE", label: "Nouveau membre" },
@@ -16,302 +52,363 @@ const TYPE_OPTIONS = [
   { value: "INFORMATION_GENERALE", label: "Information générale" },
 ];
 
+const initialFormState: NotificationFormState = {
+  titre: "",
+  message: "",
+  typeNotification: "INFORMATION_GENERALE",
+  associationId: "",
+  destinataireId: "",
+  memberId: "",
+  lienAction: "",
+  dateExpiration: "",
+};
+
 export default function NotificationFormPage() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    titre: "",
-    message: "",
-    typeNotification: "INFORMATION_GENERALE",
-    associationId: "",
-    destinataireId: "",
-    memberId: "",
-    lienAction: "",
-    dateExpiration: "",
-    envoyeeParEmail: false,
-  });
+  const [form, setForm] = useState<NotificationFormState>(initialFormState);
+  const [associations, setAssociations] = useState<AssociationOption[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [associations, setAssociations] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const updateField = <K extends keyof NotificationFormState>(
+    key: K,
+    value: NotificationFormState[K]
+  ) => {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [key]: value,
+    }));
+  };
 
-  useEffect(() => {
-    getAssociations(0, 1000)
-      .then((res) => setAssociations(res.content || []))
-      .catch(() => toast.error("Impossible de charger les associations"));
+  const loadAssociations = useCallback(async () => {
+    try {
+      const response = await getAssociations({}, 0, 1000);
+      setAssociations(response.content ?? []);
+    } catch (error) {
+      console.error("Failed to load associations", error);
+      toast.error("Impossible de charger les associations");
+    }
   }, []);
 
-  useEffect(() => {
-    getUsers({}, 0, 1000)
-      .then((res) => setUsers(res.content || []))
-      .catch(() => toast.error("Impossible de charger les utilisateurs"));
+  const loadUsers = useCallback(async () => {
+    try {
+      const response = await getUsers({}, 0, 1000);
+      setUsers(response.content ?? []);
+    } catch (error) {
+      console.error("Failed to load users", error);
+      toast.error("Impossible de charger les utilisateurs");
+    }
   }, []);
 
-  useEffect(() => {
-    if (!form.associationId) {
+  const loadMembersByAssociation = useCallback(async (associationId: string) => {
+    if (!associationId) {
       setMembers([]);
       return;
     }
 
-    memberService
-      .getAll({ associationId: Number(form.associationId), size: 1000 })
-      .then((res) => setMembers(res.content || []));
-  }, [form.associationId]);
+    try {
+      const response = await memberService.getAll({
+        associationId: Number(associationId),
+        page: 0,
+        size: 1000,
+        sort: "lastName,asc",
+      });
 
-  const handleSubmit = async () => {
-    if (!form.titre.trim()) return toast.error("Titre obligatoire");
-    if (!form.message.trim()) return toast.error("Message obligatoire");
-    if (!form.associationId) return toast.error("Association obligatoire");
-    if (!form.destinataireId) return toast.error("Destinataire obligatoire");
+      setMembers(response.content ?? []);
+    } catch (error) {
+      console.error("Failed to load members", error);
+      setMembers([]);
+      toast.error("Impossible de charger les membres");
+    }
+  }, []);
 
-    const payload = {
-      titre: form.titre,
-      message: form.message,
-      typeNotification: form.typeNotification,
-      statut: "NON_LUE",
-      associationId: Number(form.associationId),
-      destinataireId: Number(form.destinataireId),
-      memberId: form.memberId ? Number(form.memberId) : null,
-      lienAction: form.lienAction || null,
-      dateExpiration: form.dateExpiration || null,
-      envoyeeParEmail: form.envoyeeParEmail,
-    };
+  useEffect(() => {
+    loadAssociations();
+    loadUsers();
+  }, [loadAssociations, loadUsers]);
 
-    setSubmitting(true);
+  useEffect(() => {
+    loadMembersByAssociation(form.associationId);
+  }, [form.associationId, loadMembersByAssociation]);
+
+  const validateForm = (): boolean => {
+    if (!form.titre.trim()) {
+      toast.error("Titre obligatoire");
+      return false;
+    }
+
+    if (!form.message.trim()) {
+      toast.error("Message obligatoire");
+      return false;
+    }
+
+    if (!form.associationId) {
+      toast.error("Association obligatoire");
+      return false;
+    }
+
+    if (!form.destinataireId) {
+      toast.error("Destinataire obligatoire");
+      return false;
+    }
+
+    return true;
+  };
+
+  const formatDateTimeForBackend = (value: string): string | null => {
+    if (!value) return null;
+
+    return value.length === 16 ? `${value}:00` : value;
+  };
+
+  const buildPayload = (): CreateNotificationRequest => ({
+    titre: form.titre.trim(),
+    message: form.message.trim(),
+    typeNotification: form.typeNotification,
+    associationId: Number(form.associationId),
+    destinataireId: Number(form.destinataireId),
+    memberId: form.memberId ? Number(form.memberId) : null,
+    lienAction: form.lienAction.trim() || null,
+    dateExpiration: formatDateTimeForBackend(form.dateExpiration),
+  });
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!validateForm()) return;
 
     try {
-      await notificationService.create(payload);
-      toast.success("Notification créée avec succès 🎉");
+      setIsSubmitting(true);
+
+      await notificationService.createNotification(buildPayload());
+
+      toast.success("Notification créée avec succès");
       navigate("/notifications");
-    } catch (err: any) {
-      toast.error(err?.message || "Erreur serveur");
+    } catch (error) {
+      console.error("Failed to create notification", error);
+
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || "Erreur serveur"
+        : "Erreur serveur";
+
+      toast.error(message);
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>🔔 Créer une notification</h2>
+  const formatUserLabel = (user: UserOption): string => {
+    const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
 
-        {/* TITRE */}
-        <label style={styles.label}>Titre *</label>
+    return fullName || user.email || user.username || `Utilisateur #${user.id}`;
+  };
+
+  return (
+    <div style={pageStyle}>
+      <form onSubmit={handleSubmit} style={cardStyle}>
+        <h2 style={titleStyle}>🔔 Créer une notification</h2>
+
+        <label style={labelStyle}>Titre *</label>
         <input
-          style={styles.input}
+          style={inputStyle}
           value={form.titre}
-          onChange={(e) => setForm({ ...form, titre: e.target.value })}
+          onChange={(event) => updateField("titre", event.target.value)}
           placeholder="Titre de la notification"
         />
 
-        {/* TYPE */}
-        <label style={styles.label}>Type *</label>
+        <label style={labelStyle}>Type *</label>
         <select
-          style={styles.input}
+          style={inputStyle}
           value={form.typeNotification}
-          onChange={(e) =>
-            setForm({ ...form, typeNotification: e.target.value })
+          onChange={(event) =>
+            updateField("typeNotification", event.target.value as TypeNotification)
           }
         >
-          {TYPE_OPTIONS.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+          {TYPE_OPTIONS.map((type) => (
+            <option key={type.value} value={type.value}>
+              {type.label}
             </option>
           ))}
         </select>
 
-        {/* ASSOCIATION */}
-        <label style={styles.label}>Association *</label>
+        <label style={labelStyle}>Association *</label>
         <select
-          style={styles.input}
+          style={inputStyle}
           value={form.associationId}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              associationId: e.target.value,
-              memberId: "",
-            })
-          }
+          onChange={(event) => {
+            updateField("associationId", event.target.value);
+            updateField("memberId", "");
+          }}
         >
           <option value="">-- Choisir --</option>
-          {associations.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
+
+          {associations.map((association) => (
+            <option key={association.id} value={association.id}>
+              {association.name}
             </option>
           ))}
         </select>
 
-        {/* DESTINATAIRE */}
-        <label style={styles.label}>Destinataire *</label>
+        <label style={labelStyle}>Destinataire *</label>
         <select
-          style={styles.input}
+          style={inputStyle}
           value={form.destinataireId}
-          onChange={(e) =>
-            setForm({ ...form, destinataireId: e.target.value })
+          onChange={(event) =>
+            updateField("destinataireId", event.target.value)
           }
         >
           <option value="">-- Choisir --</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.firstName} {u.lastName}
+
+          {users.map((user) => (
+            <option key={user.id} value={user.id}>
+              {formatUserLabel(user)}
             </option>
           ))}
         </select>
 
-        {/* MEMBRE */}
-        <label style={styles.label}>Membre (optionnel)</label>
+        <label style={labelStyle}>Membre lié optionnel</label>
         <select
-          style={styles.input}
+          style={inputStyle}
           disabled={!form.associationId}
           value={form.memberId}
-          onChange={(e) =>
-            setForm({ ...form, memberId: e.target.value })
-          }
+          onChange={(event) => updateField("memberId", event.target.value)}
         >
           <option value="">-- Aucun --</option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.firstName} {m.lastName}
+
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.firstName} {member.lastName}
             </option>
           ))}
         </select>
 
-        {/* MESSAGE */}
-        <label style={styles.label}>Message *</label>
+        <label style={labelStyle}>Message *</label>
         <textarea
-          style={{ ...styles.input, height: 100 }}
+          style={textareaStyle}
           value={form.message}
-          onChange={(e) => setForm({ ...form, message: e.target.value })}
+          onChange={(event) => updateField("message", event.target.value)}
           placeholder="Message de la notification..."
         />
 
-        {/* LIEN */}
-        <label style={styles.label}>Lien action</label>
+        <label style={labelStyle}>Lien action</label>
         <input
-          style={styles.input}
+          style={inputStyle}
           value={form.lienAction}
-          onChange={(e) =>
-            setForm({ ...form, lienAction: e.target.value })
-          }
+          onChange={(event) => updateField("lienAction", event.target.value)}
           placeholder="https://..."
         />
 
-        {/* DATE */}
-        <label style={styles.label}>Date expiration</label>
+        <label style={labelStyle}>Date expiration</label>
         <input
           type="datetime-local"
-          style={styles.input}
+          style={inputStyle}
           value={form.dateExpiration}
-          onChange={(e) =>
-            setForm({ ...form, dateExpiration: e.target.value })
+          onChange={(event) =>
+            updateField("dateExpiration", event.target.value)
           }
         />
 
-        {/* EMAIL */}
-        <label style={styles.checkbox}>
-          <input
-            type="checkbox"
-            checked={form.envoyeeParEmail}
-            onChange={(e) =>
-              setForm({ ...form, envoyeeParEmail: e.target.checked })
-            }
-          />
-          Envoyer par email
-        </label>
-
-        {/* BUTTONS */}
-        <div style={styles.actions}>
+        <div style={actionsStyle}>
           <button
-            style={styles.cancel}
+            type="button"
+            style={cancelButtonStyle}
             onClick={() => navigate("/notifications")}
           >
             Annuler
           </button>
 
           <button
-            style={styles.submit}
-            disabled={submitting}
-            onClick={handleSubmit}
+            type="submit"
+            style={{
+              ...submitButtonStyle,
+              opacity: isSubmitting ? 0.7 : 1,
+              cursor: isSubmitting ? "not-allowed" : "pointer",
+            }}
+            disabled={isSubmitting}
           >
-            {submitting ? "Enregistrement..." : "Créer notification"}
+            {isSubmitting ? "Enregistrement..." : "Créer notification"}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
 
-/* ================= STYLE ================= */
-const styles: Record<string, any> = {
-  page: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "linear-gradient(135deg,#eef2ff,#f8fafc)",
-    padding: 20,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 520,
-    background: "#fff",
-    padding: 28,
-    borderRadius: 14,
-    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#1e1b4b",
-    fontSize: 20,
-    fontWeight: 700,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: 600,
-    marginTop: 10,
-    marginBottom: 5,
-    color: "#334155",
-  },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 8,
-    border: "1px solid #e2e8f0",
-    outline: "none",
-    fontSize: 14,
-  },
-  checkbox: {
-    marginTop: 12,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 13,
-    color: "#334155",
-  },
-  actions: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: 20,
-    gap: 10,
-  },
-  cancel: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    border: "1px solid #cbd5e1",
-    background: "#fff",
-    cursor: "pointer",
-  },
-  submit: {
-    flex: 2,
-    padding: 10,
-    borderRadius: 8,
-    border: "none",
-    background: "#4f46e5",
-    color: "#fff",
-    fontWeight: 600,
-    cursor: "pointer",
-  },
+const pageStyle: CSSProperties = {
+  minHeight: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  background: "linear-gradient(135deg,#eef2ff,#f8fafc)",
+  padding: 20,
+};
+
+const cardStyle: CSSProperties = {
+  width: "100%",
+  maxWidth: 520,
+  background: "#fff",
+  padding: 28,
+  borderRadius: 14,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+};
+
+const titleStyle: CSSProperties = {
+  textAlign: "center",
+  marginBottom: 20,
+  color: "#1e1b4b",
+  fontSize: 20,
+  fontWeight: 700,
+};
+
+const labelStyle: CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  marginTop: 10,
+  marginBottom: 5,
+  color: "#334155",
+};
+
+const inputStyle: CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 8,
+  border: "1px solid #e2e8f0",
+  outline: "none",
+  fontSize: 14,
+  boxSizing: "border-box",
+};
+
+const textareaStyle: CSSProperties = {
+  ...inputStyle,
+  height: 100,
+  resize: "vertical",
+};
+
+const actionsStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  marginTop: 20,
+  gap: 10,
+};
+
+const cancelButtonStyle: CSSProperties = {
+  flex: 1,
+  padding: 10,
+  borderRadius: 8,
+  border: "1px solid #cbd5e1",
+  background: "#fff",
+  cursor: "pointer",
+};
+
+const submitButtonStyle: CSSProperties = {
+  flex: 2,
+  padding: 10,
+  borderRadius: 8,
+  border: "none",
+  background: "#4f46e5",
+  color: "#fff",
+  fontWeight: 600,
 };

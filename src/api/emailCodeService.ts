@@ -1,27 +1,60 @@
-import axios from "./axiosConfig";
-
-import type { EmailCode } from "../types/emailCode";
+import api from "./axiosConfig";
+import type {
+  EmailCodeDto,
+  GenerateEmailCodeRequest,
+  VerifyEmailCodeRequest,
+} from "../types/emailCode";
 
 const BASE_URL = "/v1/email-codes";
 
-export const generateCode = async (email: string): Promise<EmailCode> => {
-  const response = await axios.post(`${BASE_URL}/generate`, null, {
-    params: { email },
-  });
-  return response.data;
-};
+/**
+ * Generate and send a verification code to an email address.
+ */
+export async function generateCode(
+  payload: GenerateEmailCodeRequest
+): Promise<EmailCodeDto> {
+  const { data } = await api.post<EmailCodeDto>(
+    `${BASE_URL}/generate`,
+    null,
+    {
+      params: {
+        email: payload.email,
+      },
+    }
+  );
 
-// ✅ Renommé : verifyEmailCode → verifyCode
-export const verifyCode = async (
-  email: string,
-  code: string
-): Promise<EmailCode> => {
-  const response = await axios.get(`${BASE_URL}/verify`, {
-    params: { email, code },
-  });
-  return response.data;
-};
+  return data;
+}
 
-export const deleteExpiredCodes = async (): Promise<void> => {
-  await axios.delete(`${BASE_URL}/expired`);
+/**
+ * Verify a verification code.
+ */
+export async function verifyCode(
+  payload: VerifyEmailCodeRequest
+): Promise<EmailCodeDto> {
+  const { data } = await api.post<EmailCodeDto>(
+    `${BASE_URL}/verify`,
+    null,
+    {
+      params: {
+        email: payload.email,
+        code: payload.code,
+      },
+    }
+  );
+
+  return data;
+}
+
+/**
+ * Delete all expired verification codes.
+ */
+export async function deleteExpiredCodes(): Promise<void> {
+  await api.delete<void>(`${BASE_URL}/expired`);
+}
+
+export const emailCodeService = {
+  generateCode,
+  verifyCode,
+  deleteExpiredCodes,
 };

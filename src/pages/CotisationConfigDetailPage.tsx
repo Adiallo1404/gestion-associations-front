@@ -1,106 +1,324 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { cotisationConfigService } from "../api/cotisationConfigService";
-import { getAssociations } from "../api/associationService";
+import { getAssociationById } from "../api/associationService";
 import type { CotisationConfigDto } from "../types/cotisationConfig";
 import { PERIODICITE_LABELS } from "../types/cotisationConfig";
 
+interface DetailRow {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}
+
 export default function CotisationConfigDetailPage() {
   const { associationId } = useParams<{ associationId: string }>();
+  const navigate = useNavigate();
+
   const [config, setConfig] = useState<CotisationConfigDto | null>(null);
-  const [assocName, setAssocName] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [associationName, setAssociationName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const parsedAssociationId = Number(associationId);
+
+  const loadConfig = useCallback(async () => {
+    if (!associationId || Number.isNaN(parsedAssociationId)) {
+      setError("Identifiant association invalide.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data =
+        await cotisationConfigService.getCotisationConfigByAssociation(
+          parsedAssociationId
+        );
+
+      setConfig(data);
+
+      const association = await getAssociationById(data.associationId);
+      setAssociationName(association.name);
+    } catch (loadError) {
+      console.error("Failed to load cotisation configuration", loadError);
+      setError("Configuration introuvable.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [associationId, parsedAssociationId]);
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await cotisationConfigService.getByAssociation(Number(associationId));
-        setConfig(data);
-        // Récupère le nom de l'association
-        const assocData = await getAssociations(0, 1000);
-        const found = (assocData.content || []).find((a: any) => a.id === data.associationId);
-        setAssocName(found?.name || `Association #${data.associationId}`);
-      } catch {
-        setError("Configuration introuvable.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (associationId) load();
-  }, [associationId]);
+    loadConfig();
+  }, [loadConfig]);
+
+  const formatCurrency = (value?: number | null): string => {
+    return `${Number(value ?? 0).toFixed(2)} €`;
+  };
 
   const handleDelete = async () => {
-    if (!window.confirm("Supprimer cette configuration ?")) return;
+    if (!config?.associationId) return;
+
+    const confirmed = window.confirm("Supprimer cette configuration ?");
+    if (!confirmed) return;
+
     try {
-      await cotisationConfigService.delete(Number(associationId));
-      window.location.href = "/cotisation-configs";
-    } catch {
+      setIsDeleting(true);
+
+      await cotisationConfigService.deleteCotisationConfig(config.associationId);
+      navigate("/cotisation-configs");
+    } catch (deleteError) {
+      console.error("Failed to delete cotisation configuration", deleteError);
       setError("Erreur lors de la suppression.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  if (loading) return <div style={{ textAlign: "center", padding: 64, color: "#6b7280" }}>Chargement...</div>;
+  const rows = useMemo<DetailRow[]>(() => {
+    if (!config) return [];
 
-  if (error) return (
-    <div style={{ maxWidth: 600, margin: "40px auto", padding: 16 }}>
-      <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 8, padding: "12px 16px" }}>{error}</div>
-      <div style={{ textAlign: "center", marginTop: 16 }}>
-        <button onClick={() => window.location.href = "/cotisation-configs"}
-          style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 8, cursor: "pointer" }}>
-          ← Retour
-        </button>
+    return [
+      {
+        label: "Association",
+        value: associationName || `Association #${config.associationId}`,
+      },
+      {
+        label: "Montant par défaut",
+        value: formatCurrency(config.montantDefaut),
+        highlight: true,
+      },
+      {
+        label: "Périodicité",
+        value: PERIODICITE_LABELS[config.periodicite],
+      },
+      {
+        label: "Jour limite",
+        value: config.jourLimitePaiement
+          ? `Jour ${config.jourLimitePaiement} du mois`
+          : "—",
+      },
+      {
+        label: "Pénalité retard",
+        value: formatCurrency(config.penaliteRetard),
+      },
+      {
+        label: "Délai rappel",
+        value: config.delaiRappelJours
+          ? `${config.delaiRappelJours} jours avant échéance`
+          : "—",
+      },
+    ];
+  }, [config, associationName]);
+
+  if (isLoading) {
+    return <div style={loadingStyle}>Chargement...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={errorContainerStyle}>
+        <div style={errorBoxStyle}>{error}</div>
+
+        <div style={errorActionsStyle}>
+          <button
+            type="button"
+            onClick={() => navigate("/cotisation-configs")}
+            style={backButtonStyle}
+          >
+            ← Retour
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  if (!config) return null;
-
-  const rows = [
-    { label: "Association",       value: assocName },
-    { label: "Montant par défaut", value: `${Number(config.montantDefaut).toFixed(2)} €` },
-    { label: "Périodicité",       value: PERIODICITE_LABELS[config.periodicite] },
-    { label: "Jour limite",       value: config.jourLimitePaiement ? `Jour ${config.jourLimitePaiement} du mois` : "—" },
-    { label: "Pénalité retard",   value: config.penaliteRetard ? `${Number(config.penaliteRetard).toFixed(2)} €` : "0.00 €" },
-    { label: "Délai rappel",      value: config.delaiRappelJours ? `${config.delaiRappelJours} jours avant échéance` : "—" },
-  ];
+  if (!config) {
+    return null;
+  }
 
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 16px" }}>
+    <div style={pageStyle}>
+      <div style={headerStyle}>
+        <h2 style={titleStyle}>⚙️ Config — {associationName}</h2>
 
-      {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>⚙️ Config — {assocName}</h2>
-        <button onClick={() => window.location.href = "/cotisation-configs"}
-          style={{ padding: "8px 16px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
+        <button
+          type="button"
+          onClick={() => navigate("/cotisation-configs")}
+          style={backButtonStyle}
+        >
           ← Retour
         </button>
       </div>
 
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ padding: 24 }}>
-          {rows.map(({ label, value }) => (
-            <div key={label} style={{ display: "flex", borderBottom: "1px solid #f3f4f6", padding: "12px 0" }}>
-              <span style={{ width: 200, color: "#6b7280", fontSize: 14, fontWeight: 500, flexShrink: 0 }}>{label}</span>
-              <span style={{ fontSize: 14, color: "#111827", fontWeight: label === "Montant par défaut" ? 600 : 400 }}>
-                {String(value)}
+      <div style={cardStyle}>
+        <div style={cardBodyStyle}>
+          {rows.map(({ label, value, highlight }) => (
+            <div key={label} style={rowStyle}>
+              <span style={rowLabelStyle}>{label}</span>
+
+              <span
+                style={{
+                  ...rowValueStyle,
+                  fontWeight: highlight ? 600 : 400,
+                }}
+              >
+                {value}
               </span>
             </div>
           ))}
         </div>
 
-        {/* FOOTER */}
-        <div style={{ padding: "16px 24px", background: "#f9fafb", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button onClick={() => window.location.href = `/cotisation-configs/association/${associationId}/edit`}
-            style={{ padding: "10px 20px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
+        <div style={footerStyle}>
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                `/cotisation-configs/association/${config.associationId}/edit`
+              )
+            }
+            style={editButtonStyle}
+            disabled={isDeleting}
+          >
             ✏️ Modifier
           </button>
-          <button onClick={handleDelete}
-            style={{ padding: "10px 20px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
-            🗑️ Supprimer
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            style={{
+              ...deleteButtonStyle,
+              opacity: isDeleting ? 0.7 : 1,
+              cursor: isDeleting ? "not-allowed" : "pointer",
+            }}
+          >
+            {isDeleting ? "Suppression..." : "🗑️ Supprimer"}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+const pageStyle: CSSProperties = {
+  maxWidth: 700,
+  margin: "0 auto",
+  padding: "32px 16px",
+};
+
+const loadingStyle: CSSProperties = {
+  textAlign: "center",
+  padding: 64,
+  color: "#6b7280",
+};
+
+const errorContainerStyle: CSSProperties = {
+  maxWidth: 600,
+  margin: "40px auto",
+  padding: 16,
+};
+
+const errorBoxStyle: CSSProperties = {
+  background: "#fef2f2",
+  border: "1px solid #fca5a5",
+  color: "#dc2626",
+  borderRadius: 8,
+  padding: "12px 16px",
+};
+
+const errorActionsStyle: CSSProperties = {
+  textAlign: "center",
+  marginTop: 16,
+};
+
+const headerStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 24,
+  gap: 16,
+};
+
+const titleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 22,
+  fontWeight: 700,
+};
+
+const backButtonStyle: CSSProperties = {
+  padding: "8px 16px",
+  background: "#f3f4f6",
+  border: "1px solid #d1d5db",
+  borderRadius: 8,
+  cursor: "pointer",
+};
+
+const cardStyle: CSSProperties = {
+  background: "#fff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 10,
+  overflow: "hidden",
+};
+
+const cardBodyStyle: CSSProperties = {
+  padding: 24,
+};
+
+const rowStyle: CSSProperties = {
+  display: "flex",
+  borderBottom: "1px solid #f3f4f6",
+  padding: "12px 0",
+};
+
+const rowLabelStyle: CSSProperties = {
+  width: 200,
+  color: "#6b7280",
+  fontSize: 14,
+  fontWeight: 500,
+  flexShrink: 0,
+};
+
+const rowValueStyle: CSSProperties = {
+  fontSize: 14,
+  color: "#111827",
+};
+
+const footerStyle: CSSProperties = {
+  padding: "16px 24px",
+  background: "#f9fafb",
+  borderTop: "1px solid #e5e7eb",
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: 10,
+};
+
+const editButtonStyle: CSSProperties = {
+  padding: "10px 20px",
+  background: "#f59e0b",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 14,
+};
+
+const deleteButtonStyle: CSSProperties = {
+  padding: "10px 20px",
+  background: "#ef4444",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: 14,
+};

@@ -1,43 +1,67 @@
-import axiosInstance from "./axiosConfig";
-import type { EmailEnvoyeDto, EmailEnvoyePageResponse } from "../types/emailEnvoye";
+import api from "./axiosConfig";
+import type {
+  EmailEnvoyeDto,
+  EmailEnvoyeFilter,
+  EmailEnvoyePageResponse,
+  SendContactEmailRequest,
+  SendEmailRequest,
+} from "../types/emailEnvoye";
 
 const BASE_URL = "/v1/emails-envoyes";
 
-export const sendEmail = async (dto: EmailEnvoyeDto): Promise<EmailEnvoyeDto> => {
-  const response = await axiosInstance.post<EmailEnvoyeDto>(BASE_URL, dto);
-  return response.data;
-};
+/**
+ * Sends an email from the authenticated back-office.
+ * The send status is computed server-side after the Brevo API call.
+ */
+export async function sendEmail(
+  payload: SendEmailRequest
+): Promise<EmailEnvoyeDto> {
+  const { data } = await api.post<EmailEnvoyeDto>(BASE_URL, payload);
+  return data;
+}
 
-// 🟢 Formulaire de contact public — sans token
-export const sendContactEmail = async (dto: {
-  nomExpediteur: string;
-  destinataire: string;
-  sujet: string;
-  contenu: string;
-}): Promise<EmailEnvoyeDto> => {
-  const response = await axiosInstance.post<EmailEnvoyeDto>(`${BASE_URL}/contact`, dto);
-  return response.data;
-};
+/**
+ * Sends a message from the public contact form.
+ * This endpoint does not require an authenticated back-office context.
+ */
+export async function sendContactEmail(
+  payload: SendContactEmailRequest
+): Promise<EmailEnvoyeDto> {
+  const { data } = await api.post<EmailEnvoyeDto>(
+    `${BASE_URL}/contact`,
+    payload
+  );
 
-export const getEmailById = async (id: number): Promise<EmailEnvoyeDto> => {
-  const response = await axiosInstance.get<EmailEnvoyeDto>(`${BASE_URL}/${id}`);
-  return response.data;
-};
+  return data;
+}
 
-export const getEmailsByFilters = async (params: {
-  nomExpediteur?: string;
-  destinataire?: string;
-  sujet?: string;
-  statutEnvoi?: string;
-  associationId?: number;
-  page?: number;
-  size?: number;
-}): Promise<EmailEnvoyePageResponse> => {
-  const response = await axiosInstance.get<EmailEnvoyePageResponse>(BASE_URL, { params });
-  return response.data;
-};
+export async function getEmailById(id: number): Promise<EmailEnvoyeDto> {
+  const { data } = await api.get<EmailEnvoyeDto>(`${BASE_URL}/${id}`);
+  return data;
+}
 
-export const deleteEmail = async (id: number): Promise<EmailEnvoyeDto> => {
-  const response = await axiosInstance.delete<EmailEnvoyeDto>(`${BASE_URL}/${id}`);
-  return response.data;
+export async function getEmailsByFilters(
+  params: EmailEnvoyeFilter = {}
+): Promise<EmailEnvoyePageResponse> {
+  const { data } = await api.get<EmailEnvoyePageResponse>(BASE_URL, {
+    params,
+  });
+
+  return data;
+}
+
+/**
+ * Deletes a sent email record.
+ * Backend returns HTTP 204 No Content.
+ */
+export async function deleteEmail(id: number): Promise<void> {
+  await api.delete<void>(`${BASE_URL}/${id}`);
+}
+
+export const emailEnvoyeService = {
+  sendEmail,
+  sendContactEmail,
+  getEmailById,
+  getEmailsByFilters,
+  deleteEmail,
 };

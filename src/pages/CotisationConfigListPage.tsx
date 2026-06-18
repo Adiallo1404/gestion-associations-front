@@ -1,71 +1,118 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { cotisationConfigService } from "../api/cotisationConfigService";
 import { getAssociations } from "../api/associationService";
+import type { Association } from "../types/association";
 import type { CotisationConfigDto } from "../types/cotisationConfig";
 import { PERIODICITE_LABELS } from "../types/cotisationConfig";
 import ConfirmModal from "../components/ConfirmModal";
 import { useWindowSize } from "../hooks/useWindowSize";
 
+interface DeleteModalState {
+  isOpen: boolean;
+  associationId: number | null;
+  label: string;
+}
+
+/**
+ * Displays cotisation configurations by association.
+ * Each association can have at most one cotisation configuration.
+ */
 export default function CotisationConfigListPage() {
   const navigate = useNavigate();
-
-  const [configs, setConfigs] = useState<CotisationConfigDto[]>([]);
-  const [associations, setAssociations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const { isMobile, isTablet } = useWindowSize();
 
-  const [modal, setModal] = useState<{
-    isOpen: boolean;
-    associationId: number | null;
-    label: string;
-  }>({
+  const [configs, setConfigs] = useState<CotisationConfigDto[]>([]);
+  const [associations, setAssociations] = useState<Association[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [modal, setModal] = useState<DeleteModalState>({
     isOpen: false,
     associationId: null,
     label: "",
   });
 
-  const fetchData = async () => {
+  const associationMap = useMemo(() => {
+    return new Map(
+      associations.map((association) => [association.id, association.name])
+    );
+  }, [associations]);
+
+  const getAssociationName = useCallback(
+    (associationId: number): string => {
+      return associationMap.get(associationId) ?? `Association #${associationId}`;
+    },
+    [associationMap]
+  );
+
+  const fetchData = useCallback(async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
+      setError(null);
 
-      const assocData = await getAssociations(0, 1000);
-      const assocList = assocData.content || [];
+      const associationResponse = await getAssociations({}, 0, 1000);
+      const associationList = associationResponse.content ?? [];
 
-      setAssociations(assocList);
+      setAssociations(associationList);
 
-      const results: CotisationConfigDto[] = [];
-
-      await Promise.all(
-        assocList.map(async (a: any) => {
+      const configResults = await Promise.all(
+        associationList.map(async (association) => {
           try {
-            const config = await cotisationConfigService.getByAssociation(a.id);
-            results.push(config);
-          } catch {}
+            return await cotisationConfigService.getCotisationConfigByAssociation(
+              association.id
+            );
+          } catch {
+            return null;
+          }
         })
       );
 
-      setConfigs(results);
-    } catch (err) {
-      console.error(err);
+      setConfigs(
+        configResults
+          .filter(
+            (config): config is CotisationConfigDto => config !== null
+          )
+          .sort((firstConfig, secondConfig) => {
+            const firstName =
+              associationList.find(
+                (association) => association.id === firstConfig.associationId
+              )?.name ?? "";
+
+            const secondName =
+              associationList.find(
+                (association) => association.id === secondConfig.associationId
+              )?.name ?? "";
+
+            return firstName.localeCompare(secondName, "fr");
+          })
+      );
+    } catch (loadError) {
+      console.error("Failed to load cotisation configurations", loadError);
+      setConfigs([]);
+      setAssociations([]);
+      setError("Erreur lors du chargement des configurations.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
-
-  const getAssociationName = (id: number) =>
-    associations.find((a) => a.id === id)?.name || `Association #${id}`;
+  }, [fetchData]);
 
   const handleDeleteClick = (
     associationId: number,
-    e: React.MouseEvent
+    event: MouseEvent<HTMLButtonElement>
   ) => {
-    e.stopPropagation();
+    event.stopPropagation();
 
     setModal({
       isOpen: true,
@@ -75,10 +122,12 @@ export default function CotisationConfigListPage() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!modal.associationId) return;
+    if (modal.associationId === null) return;
 
     try {
-      await cotisationConfigService.delete(modal.associationId);
+      await cotisationConfigService.deleteCotisationConfig(
+        modal.associationId
+      );
 
       setModal({
         isOpen: false,
@@ -86,8 +135,11 @@ export default function CotisationConfigListPage() {
         label: "",
       });
 
-      fetchData();
-    } catch {
+      await fetchData();
+    } catch (deleteError) {
+      console.error("Failed to delete cotisation configuration", deleteError);
+      setError("Erreur lors de la suppression de la configuration.");
+
       setModal({
         isOpen: false,
         associationId: null,
@@ -96,42 +148,54 @@ export default function CotisationConfigListPage() {
     }
   };
 
-  const handleCancelDelete = () =>
+  const handleCancelDelete = () => {
     setModal({
       isOpen: false,
       associationId: null,
       label: "",
     });
+  };
 
-  const statCards = [
-    {
-      label: "Total",
-      value: configs.length,
-      color: "#111827",
-      bg: "#f9fafb",
-    },
-    {
-      label: "Mensuelle",
-      value: configs.filter((c) => c.periodicite === "MENSUELLE").length,
-      color: "#185FA5",
-      bg: "#E6F1FB",
-    },
-    {
-      label: "Trimestrielle",
-      value: configs.filter((c) => c.periodicite === "TRIMESTRIELLE").length,
-      color: "#3B6D11",
-      bg: "#EAF3DE",
-    },
-    {
-      label: "Annuelle",
-      value: configs.filter((c) => c.periodicite === "ANNUELLE").length,
-      color: "#b45309",
-      bg: "#fefce8",
-    },
-  ];
+  const formatCurrency = (value?: number | null): string => {
+    return `${Number(value ?? 0).toFixed(2)} €`;
+  };
+
+  const statCards = useMemo(
+    () => [
+      {
+        label: "Total",
+        value: configs.length,
+        color: "#111827",
+        background: "#f9fafb",
+      },
+      {
+        label: "Mensuelle",
+        value: configs.filter((config) => config.periodicite === "MENSUELLE")
+          .length,
+        color: "#185FA5",
+        background: "#E6F1FB",
+      },
+      {
+        label: "Trimestrielle",
+        value: configs.filter(
+          (config) => config.periodicite === "TRIMESTRIELLE"
+        ).length,
+        color: "#3B6D11",
+        background: "#EAF3DE",
+      },
+      {
+        label: "Annuelle",
+        value: configs.filter((config) => config.periodicite === "ANNUELLE")
+          .length,
+        color: "#b45309",
+        background: "#fefce8",
+      },
+    ],
+    [configs]
+  );
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "24px 20px" }}>
+    <div style={pageStyle(isMobile)}>
       <ConfirmModal
         isOpen={modal.isOpen}
         title="Supprimer la configuration"
@@ -142,82 +206,45 @@ export default function CotisationConfigListPage() {
         onCancel={handleCancelDelete}
       />
 
-      {/* ✅ Breadcrumb */}
+      {/* Breadcrumb navigation */}
       <nav style={breadcrumbStyle}>
-        <span
-          style={breadcrumbHome}
-          onClick={() => navigate("/")}
-        >
+        <span style={breadcrumbHomeStyle} onClick={() => navigate("/")}>
           🏠 Accueil
         </span>
 
-        <span style={breadcrumbSeparator}>›</span>
+        <span style={breadcrumbSeparatorStyle}>›</span>
 
-        <span style={breadcrumbCurrent}>
-          Configs cotisation
-        </span>
+        <span style={breadcrumbCurrentStyle}>Configs cotisation</span>
       </nav>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-        }}
-      >
-        <h2
-          style={{
-            color: "#2c3e50",
-            margin: 0,
-            fontSize: isMobile ? 16 : 22,
-          }}
-        >
-          ⚙️ Configs cotisation
-        </h2>
+      {/* Page header */}
+      <div style={headerStyle}>
+        <h2 style={titleStyle(isMobile)}>⚙️ Configs cotisation</h2>
 
         <button
-          style={btnAdd}
+          type="button"
+          style={addButtonStyle}
           onClick={() => navigate("/cotisation-configs/new")}
         >
           {isMobile ? "➕" : "➕ Créer"}
         </button>
       </div>
 
-      {/* ✅ STATS */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile
-            ? "1fr 1fr"
-            : "repeat(4, minmax(0,1fr))",
-          gap: isMobile ? 8 : 12,
-          marginBottom: 20,
-        }}
-      >
-        {statCards.map(({ label, value, color, bg }) => (
+      {/* Summary metrics */}
+      <div style={statsGridStyle(isMobile)}>
+        {statCards.map(({ label, value, color, background }) => (
           <div
             key={label}
             style={{
-              background: bg,
-              borderRadius: 10,
-              padding: isMobile ? "12px" : "16px 20px",
+              ...statCardStyle(isMobile),
+              background,
             }}
           >
-            <div
-              style={{
-                fontSize: 11,
-                color: "#6b7280",
-                marginBottom: 4,
-              }}
-            >
-              {label}
-            </div>
+            <div style={statLabelStyle}>{label}</div>
 
             <div
               style={{
-                fontSize: isMobile ? 22 : 28,
-                fontWeight: 600,
+                ...statValueStyle(isMobile),
                 color,
               }}
             >
@@ -227,105 +254,63 @@ export default function CotisationConfigListPage() {
         ))}
       </div>
 
-      {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 40,
-            color: "#6b7280",
-          }}
-        >
-          Chargement...
-        </div>
+      {error && <div style={errorBannerStyle}>{error}</div>}
+
+      {isLoading ? (
+        <div style={loadingStyle}>Chargement...</div>
       ) : isMobile ? (
-        // ✅ MOBILE CARDS
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
+        <div style={mobileListStyle}>
           {configs.length === 0 ? (
-            <p
-              style={{
-                textAlign: "center",
-                color: "#9ca3af",
-              }}
-            >
-              Aucune configuration trouvée
-            </p>
+            <p style={emptyStateStyle}>Aucune configuration trouvée</p>
           ) : (
-            configs.map((c) => (
+            configs.map((config) => (
               <div
-                key={c.id}
-                style={{
-                  background: "#fff",
-                  borderRadius: 10,
-                  padding: 14,
-                  border: "1px solid #eee",
-                  cursor: "pointer",
-                }}
+                key={config.id ?? config.associationId}
+                style={mobileCardStyle}
                 onClick={() =>
                   navigate(
-                    `/cotisation-configs/association/${c.associationId}`
+                    `/cotisation-configs/association/${config.associationId}`
                   )
                 }
               >
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 15,
-                  }}
-                >
-                  {getAssociationName(c.associationId)}
+                <div style={mobileTitleStyle}>
+                  {getAssociationName(config.associationId)}
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    marginTop: 6,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontWeight: 600,
-                      color: "#059669",
-                      fontSize: 13,
-                    }}
-                  >
-                    {Number(c.montantDefaut).toFixed(2)} €
+                <div style={mobileMetaStyle}>
+                  <span style={amountStyle}>
+                    {formatCurrency(config.montantDefaut)}
                   </span>
 
-                  <span
-                    style={{
-                      background: "#ede9fe",
-                      color: "#5b21b6",
-                      padding: "2px 8px",
-                      borderRadius: 20,
-                      fontSize: 11,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {PERIODICITE_LABELS[c.periodicite]}
+                  <span style={periodicityBadgeStyle}>
+                    {PERIODICITE_LABELS[config.periodicite]}
                   </span>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    marginTop: 10,
-                  }}
-                >
+                <div style={mobileDetailsStyle}>
+                  <span>
+                    Jour limite :{" "}
+                    {config.jourLimitePaiement
+                      ? `Jour ${config.jourLimitePaiement}`
+                      : "—"}
+                  </span>
+
+                  <span>
+                    Rappel :{" "}
+                    {config.delaiRappelJours
+                      ? `${config.delaiRappelJours} j`
+                      : "—"}
+                  </span>
+                </div>
+
+                <div style={mobileActionsStyle}>
                   <button
-                    style={{ ...btnView, flex: 1 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    type="button"
+                    style={{ ...viewButtonStyle, flex: 1 }}
+                    onClick={(event) => {
+                      event.stopPropagation();
                       navigate(
-                        `/cotisation-configs/association/${c.associationId}`
+                        `/cotisation-configs/association/${config.associationId}`
                       );
                     }}
                   >
@@ -333,11 +318,12 @@ export default function CotisationConfigListPage() {
                   </button>
 
                   <button
-                    style={{ ...btnEdit, flex: 1 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    type="button"
+                    style={{ ...editButtonStyle, flex: 1 }}
+                    onClick={(event) => {
+                      event.stopPropagation();
                       navigate(
-                        `/cotisation-configs/association/${c.associationId}/edit`
+                        `/cotisation-configs/association/${config.associationId}/edit`
                       );
                     }}
                   >
@@ -345,9 +331,10 @@ export default function CotisationConfigListPage() {
                   </button>
 
                   <button
-                    style={{ ...btnDelete, flex: 1 }}
-                    onClick={(e) =>
-                      handleDeleteClick(c.associationId, e)
+                    type="button"
+                    style={{ ...deleteButtonStyle, flex: 1 }}
+                    onClick={(event) =>
+                      handleDeleteClick(config.associationId, event)
                     }
                   >
                     🗑️
@@ -358,199 +345,335 @@ export default function CotisationConfigListPage() {
           )}
         </div>
       ) : (
-        // ✅ TABLE DESKTOP
-        <table style={tableStyle}>
-          <thead>
-            <tr
-              style={{
-                background: "#8b5cf6",
-                color: "white",
-              }}
-            >
-              <th style={thStyle}>Association</th>
-              <th style={thStyle}>Montant</th>
-              <th style={thStyle}>Périodicité</th>
+        <div style={tableWrapperStyle}>
+          <table style={tableStyle}>
+            <thead>
+              <tr style={tableHeaderStyle}>
+                <th style={thStyle}>Association</th>
+                <th style={thStyle}>Montant</th>
+                <th style={thStyle}>Périodicité</th>
 
-              {!isTablet && <th style={thStyle}>Jour limite</th>}
-              {!isTablet && <th style={thStyle}>Pénalité</th>}
-              {!isTablet && <th style={thStyle}>Délai rappel</th>}
+                {!isTablet && <th style={thStyle}>Jour limite</th>}
+                {!isTablet && <th style={thStyle}>Pénalité</th>}
+                {!isTablet && <th style={thStyle}>Délai rappel</th>}
 
-              <th style={thStyle}>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {configs.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  style={{
-                    textAlign: "center",
-                    padding: 40,
-                    color: "#9ca3af",
-                  }}
-                >
-                  Aucune configuration
-                </td>
+                <th style={thStyle}>Actions</th>
               </tr>
-            )}
+            </thead>
 
-            {configs.map((c) => (
-              <tr
-                key={c.id}
-                style={{
-                  textAlign: "center",
-                  borderBottom: "1px solid #eee",
-                  background: "white",
-                  cursor: "pointer",
-                }}
-                onClick={() =>
-                  navigate(
-                    `/cotisation-configs/association/${c.associationId}`
-                  )
-                }
-              >
-                <td
-                  style={{
-                    ...tdStyle,
-                    fontWeight: 600,
-                  }}
-                >
-                  {getAssociationName(c.associationId)}
-                </td>
-
-                <td style={tdStyle}>
-                  <span
-                    style={{
-                      fontWeight: 600,
-                      color: "#059669",
-                    }}
+            <tbody>
+              {configs.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={isTablet ? 4 : 7}
+                    style={emptyTableCellStyle}
                   >
-                    {Number(c.montantDefaut).toFixed(2)} €
-                  </span>
-                </td>
-
-                <td style={tdStyle}>
-                  <span
-                    style={{
-                      background: "#ede9fe",
-                      color: "#5b21b6",
-                      padding: "3px 10px",
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {PERIODICITE_LABELS[c.periodicite]}
-                  </span>
-                </td>
-
-                {!isTablet && (
-                  <td style={tdStyle}>
-                    {c.jourLimitePaiement
-                      ? `Jour ${c.jourLimitePaiement}`
-                      : "—"}
+                    Aucune configuration
                   </td>
-                )}
-
-                {!isTablet && (
-                  <td style={tdStyle}>
-                    {c.penaliteRetard
-                      ? `${Number(c.penaliteRetard).toFixed(2)} €`
-                      : "0.00 €"}
-                  </td>
-                )}
-
-                {!isTablet && (
-                  <td style={tdStyle}>
-                    {c.delaiRappelJours
-                      ? `${c.delaiRappelJours} j`
-                      : "—"}
-                  </td>
-                )}
-
-                <td style={tdStyle}>
-                  <button
-                    style={btnView}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                </tr>
+              ) : (
+                configs.map((config) => (
+                  <tr
+                    key={config.id ?? config.associationId}
+                    style={tableRowStyle}
+                    onClick={() =>
                       navigate(
-                        `/cotisation-configs/association/${c.associationId}`
-                      );
-                    }}
-                  >
-                    👁️
-                  </button>
-
-                  <button
-                    style={btnEdit}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(
-                        `/cotisation-configs/association/${c.associationId}/edit`
-                      );
-                    }}
-                  >
-                    ✏️
-                  </button>
-
-                  <button
-                    style={btnDelete}
-                    onClick={(e) =>
-                      handleDeleteClick(c.associationId, e)
+                        `/cotisation-configs/association/${config.associationId}`
+                      )
                     }
                   >
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    <td style={associationCellStyle}>
+                      {getAssociationName(config.associationId)}
+                    </td>
+
+                    <td style={tdStyle}>
+                      <span style={amountStyle}>
+                        {formatCurrency(config.montantDefaut)}
+                      </span>
+                    </td>
+
+                    <td style={tdStyle}>
+                      <span style={periodicityBadgeStyle}>
+                        {PERIODICITE_LABELS[config.periodicite]}
+                      </span>
+                    </td>
+
+                    {!isTablet && (
+                      <td style={tdStyle}>
+                        {config.jourLimitePaiement
+                          ? `Jour ${config.jourLimitePaiement}`
+                          : "—"}
+                      </td>
+                    )}
+
+                    {!isTablet && (
+                      <td style={tdStyle}>
+                        {formatCurrency(config.penaliteRetard)}
+                      </td>
+                    )}
+
+                    {!isTablet && (
+                      <td style={tdStyle}>
+                        {config.delaiRappelJours
+                          ? `${config.delaiRappelJours} j`
+                          : "—"}
+                      </td>
+                    )}
+
+                    <td style={tdStyle}>
+                      <div style={actionsStyle}>
+                        <button
+                          type="button"
+                          style={viewButtonStyle}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(
+                              `/cotisation-configs/association/${config.associationId}`
+                            );
+                          }}
+                        >
+                          👁️
+                        </button>
+
+                        <button
+                          type="button"
+                          style={editButtonStyle}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(
+                              `/cotisation-configs/association/${config.associationId}/edit`
+                            );
+                          }}
+                        >
+                          ✏️
+                        </button>
+
+                        <button
+                          type="button"
+                          style={deleteButtonStyle}
+                          onClick={(event) =>
+                            handleDeleteClick(config.associationId, event)
+                          }
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
 }
 
-const breadcrumbStyle = {
+const pageStyle = (isMobile: boolean): CSSProperties => ({
+  padding: isMobile ? "12px" : "24px 20px",
+});
+
+const breadcrumbStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 8,
   marginBottom: 16,
   fontSize: 14,
-} as React.CSSProperties;
+};
 
-const breadcrumbHome = {
+const breadcrumbHomeStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 6,
   color: "#6b7280",
   cursor: "pointer",
   fontWeight: 500,
-} as React.CSSProperties;
+};
 
-const breadcrumbSeparator = {
+const breadcrumbSeparatorStyle: CSSProperties = {
   color: "#9ca3af",
   fontSize: 16,
-} as React.CSSProperties;
+};
 
-const breadcrumbCurrent = {
+const breadcrumbCurrentStyle: CSSProperties = {
   color: "#111827",
   fontWeight: 600,
-} as React.CSSProperties;
+};
 
-const btnAdd = {
+const headerStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 20,
+};
+
+const titleStyle = (isMobile: boolean): CSSProperties => ({
+  color: "#2c3e50",
+  margin: 0,
+  fontSize: isMobile ? 16 : 22,
+});
+
+const addButtonStyle: CSSProperties = {
   padding: "10px 16px",
   background: "#8b5cf6",
   color: "white",
   border: "none",
-  borderRadius: "6px",
+  borderRadius: 6,
   cursor: "pointer",
   fontWeight: 600,
 };
 
-const btnView = {
-  marginRight: 4,
+const statsGridStyle = (isMobile: boolean): CSSProperties => ({
+  display: "grid",
+  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0,1fr))",
+  gap: isMobile ? 8 : 12,
+  marginBottom: 20,
+});
+
+const statCardStyle = (isMobile: boolean): CSSProperties => ({
+  borderRadius: 10,
+  padding: isMobile ? "12px" : "16px 20px",
+});
+
+const statLabelStyle: CSSProperties = {
+  fontSize: 11,
+  color: "#6b7280",
+  marginBottom: 4,
+};
+
+const statValueStyle = (isMobile: boolean): CSSProperties => ({
+  fontSize: isMobile ? 22 : 28,
+  fontWeight: 600,
+});
+
+const errorBannerStyle: CSSProperties = {
+  background: "#fef2f2",
+  border: "1px solid #fca5a5",
+  color: "#dc2626",
+  borderRadius: 8,
+  padding: "12px 16px",
+  marginBottom: 16,
+};
+
+const loadingStyle: CSSProperties = {
+  textAlign: "center",
+  padding: 40,
+  color: "#6b7280",
+};
+
+const mobileListStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+};
+
+const emptyStateStyle: CSSProperties = {
+  textAlign: "center",
+  color: "#9ca3af",
+};
+
+const mobileCardStyle: CSSProperties = {
+  background: "#fff",
+  borderRadius: 10,
+  padding: 14,
+  border: "1px solid #eee",
+  cursor: "pointer",
+};
+
+const mobileTitleStyle: CSSProperties = {
+  fontWeight: 600,
+  fontSize: 15,
+};
+
+const mobileMetaStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  marginTop: 6,
+  flexWrap: "wrap",
+};
+
+const mobileDetailsStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 8,
+  marginTop: 8,
+  fontSize: 12,
+  color: "#6b7280",
+};
+
+const amountStyle: CSSProperties = {
+  fontWeight: 600,
+  color: "#059669",
+  fontSize: 13,
+};
+
+const periodicityBadgeStyle: CSSProperties = {
+  background: "#ede9fe",
+  color: "#5b21b6",
+  padding: "2px 8px",
+  borderRadius: 20,
+  fontSize: 11,
+  fontWeight: 600,
+};
+
+const mobileActionsStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  marginTop: 10,
+};
+
+const tableWrapperStyle: CSSProperties = {
+  background: "white",
+  borderRadius: 8,
+  overflow: "hidden",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+};
+
+const tableStyle: CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const tableHeaderStyle: CSSProperties = {
+  background: "#8b5cf6",
+  color: "white",
+};
+
+const thStyle: CSSProperties = {
+  padding: "12px 16px",
+  textAlign: "center",
+};
+
+const tableRowStyle: CSSProperties = {
+  textAlign: "center",
+  borderBottom: "1px solid #eee",
+  background: "white",
+  cursor: "pointer",
+};
+
+const tdStyle: CSSProperties = {
+  padding: "10px 16px",
+};
+
+const associationCellStyle: CSSProperties = {
+  padding: "10px 16px",
+  fontWeight: 600,
+};
+
+const emptyTableCellStyle: CSSProperties = {
+  textAlign: "center",
+  padding: 40,
+  color: "#9ca3af",
+};
+
+const actionsStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "center",
+  gap: 4,
+};
+
+const viewButtonStyle: CSSProperties = {
   background: "#3b82f6",
   color: "white",
   border: "none",
@@ -559,8 +682,7 @@ const btnView = {
   cursor: "pointer",
 };
 
-const btnEdit = {
-  marginRight: 4,
+const editButtonStyle: CSSProperties = {
   background: "#f59e0b",
   color: "white",
   border: "none",
@@ -569,28 +691,11 @@ const btnEdit = {
   cursor: "pointer",
 };
 
-const btnDelete = {
+const deleteButtonStyle: CSSProperties = {
   background: "#e74c3c",
   color: "white",
   border: "none",
   padding: "6px 8px",
   borderRadius: 5,
   cursor: "pointer",
-};
-
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse" as const,
-  background: "white",
-  borderRadius: "8px",
-  overflow: "hidden",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-};
-
-const thStyle = {
-  padding: "12px 16px",
-};
-
-const tdStyle = {
-  padding: "10px 16px",
 };

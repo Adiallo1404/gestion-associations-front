@@ -7,7 +7,7 @@ const api = axios.create({
   },
 })
 
-// ✅ Intercepteur REQUEST — ajoute le token JWT automatiquement
+// REQUEST Interceptor — automatically adds the JWT token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -19,7 +19,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// ✅ Intercepteur RESPONSE — redirige vers /login si token expiré
+// RESPONSE Interceptor — redirects to /login if token is expired
 api.interceptors.response.use(
   (response) => response,
   (error) => {
