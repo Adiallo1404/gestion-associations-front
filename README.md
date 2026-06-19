@@ -1,73 +1,221 @@
-# React + TypeScript + Vite
+# 🖥️ Association Management Platform — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern React application for managing associations, members, contributions, projects, documents, notifications, and administration workflows.
 
-Currently, two official plugins are available:
+Built with React, TypeScript and Vite, the application provides an intuitive user experience for association management through a responsive and secure interface.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🌐 Live Demo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Frontend Application
 
-## Expanding the ESLint configuration
+https://gestion-associations-front.vercel.app
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Backend API
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+https://gestionassociations.onrender.com
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 📸 Application Preview
+
+![Dashboard](docs/dashboard.png)
+
+---
+
+## 🚀 Overview
+
+The platform enables associations and non-profit organizations to manage their operations through a centralized web application.
+
+### Core Domains
+
+* 👥 Member Management
+* 💰 Contributions & Payments
+* 🏛️ Bureau & Governance
+* 📅 Events & Activities
+* 📁 Document Management
+* 📨 Email Communication
+* 🔔 Notifications
+* 📊 Dashboard & Analytics
+* 🔐 Role-Based Access Control
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
+|--------|------------|
+| Framework | React 19 |
+| Language | TypeScript |
+| Build Tool | Vite |
+| Routing | React Router DOM |
+| HTTP Client | Axios |
+| Data Fetching | TanStack Query |
+| Charts | Chart.js |
+| Notifications | React Toastify |
+| PDF Generation | jsPDF |
+| Deployment | Vercel |
+
+---
+
+## ✨ Features
+
+### 📊 Dashboard
+
+* Global statistics
+* Member analytics
+* Contribution analytics
+* Recent activity overview
+
+### 👥 Member Management
+
+* Create members
+* Update member information
+* Member history tracking
+* Association assignment
+
+### 💰 Contributions & Payments
+
+* Contribution management
+* Payment tracking
+* Due date monitoring
+* Status management
+
+### 🏛️ Association Administration
+
+* Association management
+* User management
+* Role assignment
+
+### 📁 Documents
+
+* Document management
+* Secure sharing links
+
+### 📨 Notifications
+
+* Notification management
+* Email integration
+
+### 🔐 Security
+
+* JWT Authentication
+* Role-Based Access Control (RBAC)
+* Protected Routes
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+* Node.js 18+
+* npm
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/Adiallo1404/gestion-associations-front.git
+cd gestion-associations-front
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Install Dependencies
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+### Run the Application
+
+```bash
+npm run dev
+```
+
+Application URL:
+
+```text
+http://localhost:5173
+```
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+---
+
+## 🔗 Backend Resources
+
+### Backend Repository
+
+https://github.com/Adiallo1404/GestionAssociations
+
+### API Documentation
+
+https://gestionassociations.onrender.com/swagger-ui/index.html
+
+---
+
+## 🏗️ Frontend Architecture
+
+The application is organized around reusable components and feature-based pages.
+
+```text
+src
+├── api
+├── assets
+├── components
+├── context
+├── hooks
+├── pages
+├── types
+├── utils
+├── App.tsx
+└── main.tsx
+```
+
+## 🧪 Development Practices
+
+* TypeScript Type Safety
+* Reusable Components
+* Feature-Based Organization
+* API Abstraction Layer
+* Responsive Design
+* Protected Routes
+* Clean Code Principles
+
+---
+
+## 🗺️ Roadmap
+
+### Completed
+
+* [x] Dashboard
+* [x] Authentication
+* [x] Member Management
+* [x] Contributions Management
+* [x] Payments Tracking
+* [x] Role Management
+* [x] Notifications
+* [x] Responsive UI
+* [x] Vercel Deployment
+
+### Future Enhancements
+
+* [ ] Dark Mode
+* [ ] Advanced Analytics
+* [ ] Real-Time Notifications
+* [ ] Accessibility Improvements
+* [ ] Internationalization (i18n)
+
+---
+
+## 👨‍💻 Author
+
+**Alassane Diallo**
+
+Frontend & Backend Developer
+
+Focused on building modern, secure and scalable web applications.
