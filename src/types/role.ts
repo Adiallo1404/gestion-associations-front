@@ -51,6 +51,9 @@ export type UpdateRoleRequest = Partial<CreateRoleRequest>
 export interface RoleFilter {
   name?: string
   permissions?: Permission[]
+  page?: number
+  size?: number
+  sort?: string | string[]
 }
 
 export interface RolePageResponse {

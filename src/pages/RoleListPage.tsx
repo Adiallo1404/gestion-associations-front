@@ -79,7 +79,7 @@ export default function RoleListPage() {
       setIsLoading(false);
     }
   }, [page, searchName]);
-
+  
   const fetchStats = useCallback(async () => {
     try {
       const data = await roleService.getRoles({
@@ -93,10 +93,10 @@ export default function RoleListPage() {
       setStats({
         total: allRoles.length,
         withPermissions: allRoles.filter(
-          (role) => role.permissions.length > 0
+          (role) => (role.permissions ?? []).length > 0
         ).length,
         withoutPermissions: allRoles.filter(
-          (role) => role.permissions.length === 0
+          (role) => (role.permissions ?? []).length === 0
         ).length,
       });
     } catch (statsError) {
@@ -359,8 +359,7 @@ export default function RoleListPage() {
                     type="button"
                     style={{ ...deleteButtonStyle, flex: 1 }}
                     onClick={(event) =>
-                      handleDeleteClick(role.id, role.name, event)
-                    }
+                      handleDeleteClick(role.id!, role.name, event)}
                   >
                     🗑️
                   </button>
@@ -449,7 +448,7 @@ export default function RoleListPage() {
                           type="button"
                           style={deleteButtonStyle}
                           onClick={(event) =>
-                            handleDeleteClick(role.id, role.name, event)
+                            handleDeleteClick(role.id!, role.name, event)
                           }
                         >
                           🗑️

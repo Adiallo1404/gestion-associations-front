@@ -107,13 +107,13 @@ export default function RoleFormPage() {
 
     return null;
   };
-
+  
   const buildPayload = (): CreateRoleRequest => ({
-    name: form.name.trim(),
-    description: form.description.trim() || null,
-    externalReference: form.externalReference.trim() || null,
-    permissions: form.permissions,
-  });
+  name: form.name.trim(),
+  description: form.description.trim() || undefined,
+  externalReference: form.externalReference.trim() || undefined,
+  permissions: form.permissions,
+});
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -89,7 +89,7 @@ export default function CotisationDetailPage() {
   }
 
   const stMeta = STATUT_META[cotisation.statut] ?? { label: cotisation.statut, color: "#374151", bg: "#f3f4f6", dot: "#9ca3af" };
-  const sym = getDeviseSymbol(cotisation.devise);
+  const sym = getDeviseSymbol(cotisation.devise ?? undefined);
 
   return (
     <div style={st.page}>

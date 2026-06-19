@@ -112,7 +112,7 @@ export default function NotificationDetailPage() {
       },
       {
         label: "Statut",
-        value: notification.statut,
+  value: notification.statut ?? "—",
       },
       {
         label: "Association",
@@ -196,9 +196,9 @@ export default function NotificationDetailPage() {
       <div style={cardStyle}>
         <div style={cardBodyStyle}>
           <div style={statusWrapperStyle}>
-            <span style={statusBadgeStyle(notification.statut)}>
-              {getStatusLabel(notification.statut)}
-            </span>
+            <span style={statusBadgeStyle(notification.statut ?? "NON_LUE")}>
+  {getStatusLabel(notification.statut ?? "NON_LUE")}
+</span>
           </div>
 
           {rows.map(({ label, value }) => (

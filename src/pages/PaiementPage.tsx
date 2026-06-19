@@ -210,10 +210,10 @@ export default function PaiementPage() {
       setIsLoading(true);
 
       const response = await getCotisations(
-        { statut: filterStatut || undefined },
-        page,
-        PAGE_SIZE
-      );
+  { statut: filterStatut ? filterStatut as StatutCotisation : undefined },
+  page,
+  PAGE_SIZE
+ );
 
       setCotisations(response.content ?? []);
     } catch (error) {
@@ -314,10 +314,17 @@ ${associationName}`,
 
       // Backend receives a full cotisation payload because the current service uses PUT update.
       await updateCotisation(selected.id, {
-        ...selected,
-        statut: "PAYEE",
-        referencePaiement: reference,
-      });
+  statut: "PAYEE" as StatutCotisation,
+  referencePaiement: reference,
+  periodeDebut: selected.periodeDebut ?? undefined,
+  periodeFin: selected.periodeFin ?? undefined,
+  dateEcheance: selected.dateEcheance ?? undefined,
+  devise: selected.devise ?? undefined,
+  montant: selected.montant,
+  montantPenalite: selected.montantPenalite ?? undefined,
+  memberId: selected.memberId ?? undefined,
+  associationId: selected.associationId ?? undefined,
+});
 
       const receipt = buildReceiptData(selected, reference);
 

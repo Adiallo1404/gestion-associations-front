@@ -4,7 +4,7 @@ export type StatutCotisation = 'EN_ATTENTE' | 'PAYEE' | 'EN_RETARD' | 'ANNULEE'
 export interface Cotisation {
   id: number
   montant: number
-  devise?: string
+  devise?: string | null
   statut: StatutCotisation
   periodeDebut: string
   periodeFin: string
@@ -30,6 +30,8 @@ export interface CotisationFilter {
   memberId?: number
   periodeDebut?: string
   periodeFin?: string
+  montantMin?: number
+  montantMax?: number
 }
 
 // Individual contribution tracking per member

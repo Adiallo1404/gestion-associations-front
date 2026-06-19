@@ -1,10 +1,5 @@
-import {
-  FormEvent,
-  useEffect,
-  useState,
-  type ChangeEvent,
-  type CSSProperties,
-} from "react";
+import type { FormEvent, ChangeEvent, CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { memberHistoryService } from "../api/memberHistoryService";

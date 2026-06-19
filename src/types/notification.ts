@@ -10,16 +10,16 @@ export type TypeNotification =
 export type StatutNotification = "NON_LUE" | "LUE" | "ARCHIVEE";
 
 export interface NotificationDto {
-  id: number;
+  id?: number;
   titre: string;
   message: string;
   typeNotification: TypeNotification;
-  statut: StatutNotification;
-  dateCreation: string;
+  statut?: StatutNotification;
+  dateCreation?: string;
   dateLecture?: string | null;
   dateExpiration?: string | null;
   lienAction?: string | null;
-  envoyeeParEmail: boolean;
+  envoyeeParEmail?: boolean;
   associationId: number;
   destinataireId: number;
   memberId?: number | null;

@@ -152,12 +152,13 @@ export default function RoleDetailPage() {
 
           <div style={permissionSectionStyle}>
             <span style={permissionTitleStyle}>
-              Permissions ({role.permissions.length})
+              permissions ({(role.permissions ?? []).length}
             </span>
 
             <div style={permissionListStyle}>
-              {role.permissions.length > 0 ? (
-                role.permissions.map((permission) => (
+
+              {(role.permissions ?? []).length > 0 ? (
+  (role.permissions ?? []).map((permission) => (
                   <span key={permission} style={permissionBadgeStyle}>
                     {PERMISSION_LABELS[permission] || permission}
                   </span>

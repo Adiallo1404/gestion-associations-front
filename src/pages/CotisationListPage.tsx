@@ -61,7 +61,7 @@ export default function CotisationListPage() {
     setModal({
       isOpen: true,
       id: c.id,
-      label: `cotisation de ${c.montant} ${getDeviseSymbol(c.devise)} (${STATUT_META[c.statut]?.label ?? c.statut})`,
+      label: `cotisation de ${c.montant} ${getDeviseSymbol(c.devise ?? undefined)}  (${STATUT_META[c.statut]?.label ?? c.statut})`,
     })
 
   const handleConfirmDelete = async () => {
@@ -163,7 +163,7 @@ export default function CotisationListPage() {
               return (
                 <div key={c.id} style={{ background: '#fff', borderRadius: 12, padding: 16, border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <strong style={{ fontSize: 17, color: '#0f172a' }}>{c.montant} {getDeviseSymbol(c.devise)}</strong>
+                    <strong style={{ fontSize: 17, color: '#0f172a' }}>{c.montant} {getDeviseSymbol(c.devise ?? undefined)}</strong>
                     <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
                   </div>
                   <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12 }}>
@@ -207,7 +207,7 @@ export default function CotisationListPage() {
                     onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}
                   >
                     <td style={{ padding: '12px 16px', fontSize: 14, color: '#374151' }}>#{c.memberId}</td>
-                    <td style={{ padding: '12px 16px' }}><strong style={{ fontSize: 14, color: '#0f172a' }}>{c.montant} {getDeviseSymbol(c.devise)}</strong></td>
+                    <td style={{ padding: '12px 16px' }}><strong style={{ fontSize: 14, color: '#0f172a' }}>{c.montant} {getDeviseSymbol(c.devise ?? undefined)}</strong></td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ background: st.bg, color: st.color, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
                     </td>

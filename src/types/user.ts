@@ -27,6 +27,8 @@ export interface UserDto {
   globalRole?: GlobalRole | null;
   active?: boolean | null;
   dateCreation?: string | null;
+  lastLoginAt?: string | null;
+  lastModified?: string | null;
 }
 
 // Alias for backward compatibility

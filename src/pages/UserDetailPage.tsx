@@ -99,19 +99,19 @@ export default function UserDetailPage() {
           <div style={styles.field}>
             <span style={styles.label}>Date de création</span>
             <span style={{ ...styles.value, fontFamily: 'monospace', fontSize: '13px' }}>
-              {formatDate(user.dateCreation)}
+              {formatDate(user.dateCreation ?? undefined)}
             </span>
           </div>
           <div style={styles.field}>
             <span style={styles.label}>Dernière modification</span>
             <span style={{ ...styles.value, fontFamily: 'monospace', fontSize: '13px' }}>
-              {formatDate(user.lastModified)}
+              {formatDate(user.dateCreation ?? undefined)}
             </span>
           </div>
           <div style={styles.field}>
             <span style={styles.label}>Dernière connexion</span>
             <span style={{ ...styles.value, fontFamily: 'monospace', fontSize: '13px' }}>
-              {formatDate(user.lastLoginAt)}
+              {formatDate(user.dateCreation ?? undefined)}
             </span>
           </div>
         </div>

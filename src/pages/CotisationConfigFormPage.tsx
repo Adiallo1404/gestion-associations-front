@@ -47,9 +47,9 @@ interface CotisationPayload {
   statut: StatutCotisation;
   periodeDebut: string;
   periodeFin: string;
-  dateEcheance: string | null;
+  dateEcheance?: string;
   montantPenalite: number;
-  referencePaiement: string | null;
+  referencePaiement?: string;
   associationId: number;
   memberId: number;
 }
@@ -223,17 +223,17 @@ export default function CotisationFormPage() {
   };
 
   const buildPayload = (): CotisationPayload => ({
-    montant: Number(form.montant),
-    devise: form.devise,
-    statut: form.statut,
-    periodeDebut: form.periodeDebut,
-    periodeFin: form.periodeFin,
-    dateEcheance: form.dateEcheance || null,
-    montantPenalite: Number(form.montantPenalite) || 0,
-    referencePaiement: form.referencePaiement.trim() || null,
-    associationId: Number(form.associationId),
-    memberId: Number(form.memberId),
-  });
+  montant: Number(form.montant),
+  devise: form.devise,
+  statut: form.statut,
+  periodeDebut: form.periodeDebut,
+  periodeFin: form.periodeFin,
+  dateEcheance: form.dateEcheance || undefined,
+  montantPenalite: Number(form.montantPenalite) || 0,
+  referencePaiement: form.referencePaiement.trim() || undefined,
+  associationId: Number(form.associationId),
+  memberId: Number(form.memberId),
+});
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
