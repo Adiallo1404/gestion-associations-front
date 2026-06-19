@@ -20,7 +20,7 @@ https://gestionassociations.onrender.com
 
 ## 📸 Application Preview
 
-![Dashboard](docs/dashboard.png)
+> Dashboard screenshot coming soon.
 
 ---
 
@@ -44,18 +44,18 @@ The platform enables associations and non-profit organizations to manage their o
 
 ## 🛠️ Technology Stack
 
-| Layer | Technology |
-|--------|------------|
-| Framework | React 19 |
-| Language | TypeScript |
-| Build Tool | Vite |
-| Routing | React Router DOM |
-| HTTP Client | Axios |
-| Data Fetching | TanStack Query |
-| Charts | Chart.js |
-| Notifications | React Toastify |
-| PDF Generation | jsPDF |
-| Deployment | Vercel |
+| Layer          | Technology       |
+| -------------- | ---------------- |
+| Framework      | React 19         |
+| Language       | TypeScript       |
+| Build Tool     | Vite             |
+| Routing        | React Router DOM |
+| HTTP Client    | Axios            |
+| Data Fetching  | TanStack Query   |
+| Charts         | Chart.js         |
+| Notifications  | React Toastify   |
+| PDF Generation | jsPDF            |
+| Deployment     | Vercel           |
 
 ---
 
@@ -175,6 +175,8 @@ src
 ├── App.tsx
 └── main.tsx
 ```
+
+---
 
 ## 🧪 Development Practices
 
