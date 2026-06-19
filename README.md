@@ -20,7 +20,9 @@ https://gestionassociations.onrender.com
 
 ## 📸 Application Preview
 
-> Dashboard screenshot coming soon.
+![Association Management Dashboard](image.png)
+
+*Main dashboard showing associations, members, contributions, roles and project statistics.*
 
 ---
 
