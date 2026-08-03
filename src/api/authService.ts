@@ -1,59 +1,36 @@
-import api from './axiosConfig'
-import type { LoginRequest, RegisterRequest, AuthResponse } from '../types/auth'
+
+import keycloak from './keycloak'
 
 export const authService = {
-
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    const response = await api.post<AuthResponse>('/api/auth/login', data)
-    localStorage.setItem('token', response.data.token)
-    return response.data
+  login: async (): Promise<void> => {
+    await keycloak.login()
   },
 
-  register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    const response = await api.post<AuthResponse>('/api/auth/register', data)
-    localStorage.setItem('token', response.data.token)
-    return response.data
+  register: async (): Promise<void> => {
+    await keycloak.register()
   },
 
-  logout: () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    window.location.href = '/login'
+  logout: async (): Promise<void> => {
+    await keycloak.logout({
+      redirectUri: window.location.origin,
+    })
   },
 
-  getToken: (): string | null => {
-    return localStorage.getItem('token')
+  getToken: (): string | undefined => {
+    return keycloak.token
   },
 
   isAuthenticated: (): boolean => {
-    const token = localStorage.getItem('token')
-    if (!token) return false
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      if (payload.exp * 1000 <= Date.now()) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        return false
-      }
-      return true
-    } catch {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      return false
-    }
+    return !!keycloak.authenticated
   },
 
-
-  forgotPassword: async (email: string): Promise<void> => {
-    await api.post('/api/auth/forgot-password', { email })
+  updateToken: async (): Promise<boolean> => {
+    return await keycloak.updateToken(30)
   },
 
-
-  resetPassword: async (token: string, newPassword: string): Promise<void> => {
-    await api.post('/api/auth/reset-password', { token, newPassword })
+  forgotPassword: async (): Promise<void> => {
+    await keycloak.login({
+      action: 'UPDATE_PASSWORD',
+    })
   },
 }

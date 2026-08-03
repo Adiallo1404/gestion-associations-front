@@ -169,7 +169,13 @@ export default function DashboardPage() {
     { label: "Projets", value: 0, sub: "actifs", accent: "#0891b2", iconBg: "#ecfeff", icon: "📁", trend: "+2", up: true },
   ]);
 
-  const userInitials = user?.email ? user.email.substring(0, 2).toUpperCase() : "ME";
+  const userInitials = user?.firstName && user?.lastName
+  ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+  : "ME";
+
+const userDisplayName = user?.firstName && user?.lastName
+  ? `${user.firstName} ${user.lastName}`
+  : user?.email?.split("@")[0] || "Mon compte";
 
   const menuSections = ALL_MENU_SECTIONS.map((section) => {
     if (section.title === "Finances") {
@@ -532,7 +538,8 @@ export default function DashboardPage() {
 
                   {!isTablet && (
                     <div style={{ lineHeight: 1.3 }}>
-                      <div style={s.accountName}>{user?.email?.split("@")[0] || "Mon compte"}</div>
+
+                      <div style={s.accountName}>{userDisplayName}</div>
                       {roleBadge && <div style={{ ...s.accountRole, color: roleBadge.bg }}>{roleBadge.label}</div>}
                     </div>
                   )}

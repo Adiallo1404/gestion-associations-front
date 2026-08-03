@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { authService } from '../api/authService'
+import keycloak from '../api/keycloak'
 import type { UserInfo } from '../types/auth'
 import type { GlobalRole } from '../hooks/useRole'
 
@@ -8,60 +8,56 @@ interface AuthContextType {
   isAuthenticated: boolean
   user: UserInfo | null
   role: GlobalRole
-  login: (email: string, password: string) => Promise<void>
+  login: () => Promise<void>
   logout: () => void
   loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const extractRoleFromToken = (token: string): GlobalRole => {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.globalRole || payload.role || null
-  } catch {
-    return null
-  }
+const extractRoleFromToken = (): GlobalRole => {
+  const roles: string[] = (keycloak.tokenParsed as any)?.realm_access?.roles ?? []
+
+  if (roles.includes('SUPER_ADMIN')) return 'SUPER_ADMIN'
+  if (roles.includes('ADMIN')) return 'ADMIN'
+  if (roles.includes('USER')) return 'USER'
+  return null
+}
+
+const buildUserFromToken = (): UserInfo | null => {
+  if (!keycloak.tokenParsed) return null
+
+  const tp = keycloak.tokenParsed as any
+
+  return {
+    id: tp.sub,
+    email: tp.email ?? tp.preferred_username ?? '',
+    firstName: tp.given_name ?? '',
+    lastName: tp.family_name ?? '',
+    globalRole: extractRoleFromToken() ?? undefined,
+  } as UserInfo
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState<UserInfo | null>(null)
-  const [role, setRole] = useState<GlobalRole>(null)
-  const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(!!keycloak.authenticated)
+  const [user, setUser] = useState<UserInfo | null>(keycloak.authenticated ? buildUserFromToken() : null)
+  const [role, setRole] = useState<GlobalRole>(keycloak.authenticated ? extractRoleFromToken() : null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (authService.isAuthenticated()) {
-      const token = authService.getToken()!
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      const extractedRole = extractRoleFromToken(token)
-      setUser({
-        id: payload.userId,              // ✅ extrait du JWT
-        email: payload.sub,
-        globalRole: extractedRole ?? undefined
-      })
-      setRole(extractedRole)
+    keycloak.onAuthRefreshSuccess = () => {
+      setUser(buildUserFromToken())
+      setRole(extractRoleFromToken())
       setIsAuthenticated(true)
     }
-    setLoading(false)
   }, [])
 
-  const login = async (email: string, password: string) => {
-    await authService.login({ email, password })
-    const token = authService.getToken()!
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const extractedRole = extractRoleFromToken(token)
-    setUser({
-      id: payload.userId,                // ✅ extrait du JWT
-      email: payload.sub,
-      globalRole: extractedRole ?? undefined
-    })
-    setRole(extractedRole)
-    setIsAuthenticated(true)
+  const login = async () => {
+    await keycloak.login()
   }
 
   const logout = () => {
-    authService.logout()
+    keycloak.logout({ redirectUri: window.location.origin })
     setUser(null)
     setRole(null)
     setIsAuthenticated(false)

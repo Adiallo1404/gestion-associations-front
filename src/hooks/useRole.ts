@@ -1,4 +1,5 @@
 // src/hooks/useRole.ts
+import keycloak from '../api/keycloak' // adapte le chemin selon où se trouve ton fichier keycloak.ts
 
 export type GlobalRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER' | null
 
@@ -9,33 +10,21 @@ export const useRole = (): {
   isAdminOrSuperAdmin: boolean
   isUser: boolean
 } => {
-  const token = localStorage.getItem('token')
-  if (!token) return {
-    role: null,
-    isSuperAdmin: false,
-    isAdmin: false,
-    isAdminOrSuperAdmin: false,
-    isUser: false
-  }
+  const realmRoles: string[] = keycloak.tokenParsed?.realm_access?.roles ?? []
 
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const role: GlobalRole = payload.globalRole || payload.role || null
+  const role: GlobalRole = realmRoles.includes('SUPER_ADMIN')
+    ? 'SUPER_ADMIN'
+    : realmRoles.includes('ADMIN')
+    ? 'ADMIN'
+    : realmRoles.includes('USER')
+    ? 'USER'
+    : null
 
-    return {
-      role,
-      isSuperAdmin:        role === 'SUPER_ADMIN',
-      isAdmin:             role === 'ADMIN',
-      isAdminOrSuperAdmin: role === 'ADMIN' || role === 'SUPER_ADMIN',
-      isUser:              role === 'USER',
-    }
-  } catch {
-    return {
-      role: null,
-      isSuperAdmin: false,
-      isAdmin: false,
-      isAdminOrSuperAdmin: false,
-      isUser: false
-    }
+  return {
+    role,
+    isSuperAdmin: role === 'SUPER_ADMIN',
+    isAdmin: role === 'ADMIN',
+    isAdminOrSuperAdmin: role === 'ADMIN' || role === 'SUPER_ADMIN',
+    isUser: role === 'USER',
   }
 }
