@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useWindowSize } from '../hooks/useWindowSize'
@@ -8,22 +7,8 @@ export default function LoginPage() {
   const { login } = useAuth()
   const { isMobile } = useWindowSize()
 
-  const [form, setForm] = useState({ email: '', password: '' })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await login(form.email, form.password)
-      navigate('/')
-    } catch {
-      setError('Email ou mot de passe incorrect')
-    } finally {
-      setLoading(false)
-    }
+  const handleLogin = async () => {
+    await login()
   }
 
   return (
@@ -49,14 +34,14 @@ export default function LoginPage() {
         )}
 
         <button
-          onClick={() => navigate('/login')}
+          onClick={handleLogin}
           style={{ background: '#1d4ed8', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
         >
           Se connecter
         </button>
       </nav>
 
-      {/* FORMULAIRE */}
+      {/* BLOC CENTRAL */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 64px)' }}>
         <div style={{
           background: '#fff',
@@ -67,67 +52,25 @@ export default function LoginPage() {
           margin: isMobile ? '0 12px' : 0,
           boxShadow: isMobile ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
           border: isMobile ? 'none' : '1px solid #e2e8f0',
+          textAlign: 'center',
         }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
             <div style={{ width: 38, height: 38, background: '#2563eb', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: '#fff' }}>G</div>
             <span style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>GestAssoc</span>
           </div>
 
           <h2 style={{ fontWeight: 700, color: '#0f172a', margin: '0 0 6px', fontSize: isMobile ? 20 : 24 }}>Connexion</h2>
-          <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 28px' }}>Entrez vos identifiants pour accéder à votre espace</p>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>Email</label>
-              <input
-                style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none', color: '#0f172a', background: '#f8fafc' }}
-                type="email"
-                placeholder="votre@email.com"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                required
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>Mot de passe</label>
-                <span style={{ fontSize: 13, color: '#2563eb', cursor: 'pointer', fontWeight: 500 }} onClick={() => navigate('/forgot-password')}>
-                  Mot de passe oublié ?
-                </span>
-              </div>
-              <input
-                style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none', color: '#0f172a', background: '#f8fafc' }}
-                type="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-                required
-              />
-            </div>
-
-            {error && (
-              <div style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 14 }}>
-                ⚠️ {error}
-              </div>
-            )}
-
-            <button
-              style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.7 : 1, padding: isMobile ? '13px' : '12px', marginTop: 4 }}
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? 'Connexion…' : 'Se connecter'}
-            </button>
-          </form>
-
-          <p style={{ textAlign: 'center', fontSize: 14, color: '#64748b', marginTop: 20 }}>
-            Pas encore de compte ?{' '}
-            <span style={{ color: '#2563eb', fontWeight: 600, cursor: 'pointer' }} onClick={() => navigate('/register')}>
-              S'inscrire
-            </span>
+          <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 28px' }}>
+            Vous allez être redirigé vers notre page de connexion sécurisée
           </p>
+
+          <button
+            onClick={handleLogin}
+            style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 600, cursor: 'pointer', padding: isMobile ? '13px' : '12px', width: '100%' }}
+          >
+            Se connecter
+          </button>
         </div>
       </div>
 

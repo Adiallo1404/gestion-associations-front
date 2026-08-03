@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(!!keycloak.authenticated)
   const [user, setUser] = useState<UserInfo | null>(keycloak.authenticated ? buildUserFromToken() : null)
   const [role, setRole] = useState<GlobalRole>(keycloak.authenticated ? extractRoleFromToken() : null)
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
 
   useEffect(() => {
     keycloak.onAuthRefreshSuccess = () => {
