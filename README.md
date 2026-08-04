@@ -1,119 +1,120 @@
-# 🖥️ Association Management Platform — Frontend
+# Association Management Platform — Frontend
 
 A modern React application for managing associations, members, contributions, projects, documents, notifications, and administration workflows.
 
-Built with React, TypeScript and Vite, the application provides an intuitive user experience for association management through a responsive and secure interface.
+Built with **React**, **TypeScript** and **Vite**, the application provides an intuitive, responsive user experience for association management, secured end-to-end through **Keycloak** (OpenID Connect / OAuth2) for centralized authentication and role-based access control.
 
 ---
 
 ## 🌐 Live Demo
 
-### Frontend Application
-
-https://gestion-associations-front.vercel.app
-
-### Backend API
-
-https://gestionassociations.onrender.com
-
----
-
-## 📸 Application Preview
-
-![Association Management Dashboard](image.png)
-
-*Main dashboard showing associations, members, contributions, roles and project statistics.*
+| Service | URL |
+|---|---|
+| Frontend Application | https://gestion-associations-front.vercel.app |
+| Backend API | https://gestionassociations.onrender.com |
+| Identity Provider (Keycloak) | https://gestassoc-keycloak-v2.onrender.com |
 
 ---
 
 ## 🚀 Overview
 
-The platform enables associations and non-profit organizations to manage their operations through a centralized web application.
+The platform enables associations and non-profit organizations to manage their operations through a centralized, secure web application.
 
 ### Core Domains
 
-* 👥 Member Management
-* 💰 Contributions & Payments
-* 🏛️ Bureau & Governance
-* 📅 Events & Activities
-* 📁 Document Management
-* 📨 Email Communication
-* 🔔 Notifications
-* 📊 Dashboard & Analytics
-* 🔐 Role-Based Access Control
+- 👥 Member Management
+- 💰 Contributions & Payments
+- 🏛️ Bureau & Governance
+- 📅 Events & Activities
+- 📁 Document Management
+- 📨 Email Communication
+- 🔔 Notifications
+- 📊 Dashboard & Analytics
+- 🔐 Role-Based Access Control (Keycloak)
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer          | Technology       |
-| -------------- | ---------------- |
-| Framework      | React 19         |
-| Language       | TypeScript       |
-| Build Tool     | Vite             |
-| Routing        | React Router DOM |
-| HTTP Client    | Axios            |
-| Data Fetching  | TanStack Query   |
-| Charts         | Chart.js         |
-| Notifications  | React Toastify   |
-| PDF Generation | jsPDF            |
-| Deployment     | Vercel           |
+| Layer | Technology |
+|---|---|
+| Framework | React 19 |
+| Language | TypeScript |
+| Build Tool | Vite |
+| Routing | React Router DOM |
+| HTTP Client | Axios |
+| Data Fetching | TanStack Query |
+| Charts | Chart.js |
+| Notifications | React Toastify |
+| PDF Generation | jsPDF |
+| Authentication | Keycloak (OpenID Connect / OAuth2) |
+| Deployment | Vercel |
 
 ---
 
 ## ✨ Features
 
 ### 📊 Dashboard
-
-* Global statistics
-* Member analytics
-* Contribution analytics
-* Recent activity overview
+- Global statistics
+- Member analytics
+- Contribution analytics
+- Recent activity overview
 
 ### 👥 Member Management
-
-* Create members
-* Update member information
-* Member history tracking
-* Association assignment
+- Create and update member records
+- Member history tracking
+- Association assignment
 
 ### 💰 Contributions & Payments
-
-* Contribution management
-* Payment tracking
-* Due date monitoring
-* Status management
+- Contribution management
+- Payment tracking
+- Due date monitoring
+- Status management
 
 ### 🏛️ Association Administration
-
-* Association management
-* User management
-* Role assignment
+- Association management
+- User management
+- Role assignment
 
 ### 📁 Documents
-
-* Document management
-* Secure sharing links
+- Document management
+- Secure sharing links
 
 ### 📨 Notifications
-
-* Notification management
-* Email integration
+- Notification management
+- Email integration
 
 ### 🔐 Security
+- OAuth2 / OpenID Connect authentication via **Keycloak**
+- Centralized identity and access management, independent of the application layer
+- Role-Based Access Control (RBAC): `USER`, `ADMIN`, `SUPER_ADMIN`
+- Route-level authorization based on realm roles
+- Automatic silent token refresh via `keycloak-js`
+- Stateless session handling (no credentials stored in the frontend)
 
-* JWT Authentication
-* Role-Based Access Control (RBAC)
-* Protected Routes
+---
+
+## 🏗️ Authentication Architecture
+
+Authentication is fully delegated to Keycloak rather than implemented in-house:
+
+The frontend attaches the Keycloak-issued JWT to every backend request. The backend independently validates it against Keycloak's public keys.
+
+This approach follows industry-standard practices for authentication:
+
+- No passwords are ever handled or stored by the application itself
+- Tokens are short-lived and refreshed transparently
+- The frontend uses a dedicated **public client** (`gestassoc-front`), separate from the backend's **confidential client** (`gestassoc-api`), following OAuth2 client-type best practices
+- Authorization Code flow with PKCE, as required for browser-based single-page applications
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
-* Node.js 18+
-* npm
+- Node.js 18+
+- npm
+- Access to a running Keycloak instance with the `gestassoc` realm configured
 
 ### Clone the Repository
 
@@ -128,17 +129,24 @@ cd gestion-associations-front
 npm install
 ```
 
+### Environment Variables
+
+Create a `.env` file at the project root:
+
+```dotenv
+VITE_API_URL=http://localhost:8082
+VITE_KEYCLOAK_URL=http://localhost:8080
+VITE_KEYCLOAK_REALM=gestassoc
+VITE_KEYCLOAK_CLIENT_ID=gestassoc-front
+```
+
 ### Run the Application
 
 ```bash
 npm run dev
 ```
 
-Application URL:
-
-```text
-http://localhost:5173
-```
+Application available at: `http://localhost:5173`
 
 ### Build for Production
 
@@ -148,78 +156,67 @@ npm run build
 
 ---
 
-## 🔗 Backend Resources
+## 🔗 Related Resources
 
-### Backend Repository
-
-https://github.com/Adiallo1404/GestionAssociations
-
-### API Documentation
-
-https://gestionassociations.onrender.com/swagger-ui/index.html
+| Resource | Link |
+|---|---|
+| Backend Repository | https://github.com/Adiallo1404/GestionAssociations |
+| API Documentation (Swagger) | https://gestionassociations.onrender.com/swagger-ui/index.html |
 
 ---
 
-## 🏗️ Frontend Architecture
+## 🏗️ Project Structure
 
-The application is organized around reusable components and feature-based pages.
-
-```text
 src
-├── api
+├── api # HTTP clients, service layer, Keycloak configuration
 ├── assets
 ├── components
-├── context
-├── hooks
+├── context # Global auth context (Keycloak session, user, role)
+├── hooks # Role-based access hooks, custom utilities
 ├── pages
 ├── types
 ├── utils
 ├── App.tsx
 └── main.tsx
-```
 
 ---
 
 ## 🧪 Development Practices
 
-* TypeScript Type Safety
-* Reusable Components
-* Feature-Based Organization
-* API Abstraction Layer
-* Responsive Design
-* Protected Routes
-* Clean Code Principles
+- TypeScript type safety across the codebase
+- Reusable, composable components
+- Feature-based folder organization
+- Centralized API abstraction layer
+- Fully responsive design (mobile, tablet, desktop)
+- Route-level protection based on authentication and role
+- Clean code principles and separation of concerns
 
 ---
 
 ## 🗺️ Roadmap
 
 ### Completed
-
-* [x] Dashboard
-* [x] Authentication
-* [x] Member Management
-* [x] Contributions Management
-* [x] Payments Tracking
-* [x] Role Management
-* [x] Notifications
-* [x] Responsive UI
-* [x] Vercel Deployment
+- [x] Dashboard
+- [x] Keycloak (OIDC) authentication integration
+- [x] Member Management
+- [x] Contributions Management
+- [x] Payments Tracking
+- [x] Role Management via Keycloak realm roles
+- [x] Notifications
+- [x] Responsive UI
+- [x] Production deployment (Vercel + Render + Keycloak)
 
 ### Future Enhancements
-
-* [ ] Dark Mode
-* [ ] Advanced Analytics
-* [ ] Real-Time Notifications
-* [ ] Accessibility Improvements
-* [ ] Internationalization (i18n)
+- [ ] Dark Mode
+- [ ] Advanced Analytics
+- [ ] Real-Time Notifications
+- [ ] Accessibility Improvements (WCAG)
+- [ ] Internationalization (i18n)
 
 ---
 
 ## 👨‍💻 Author
 
 **Alassane Diallo**
-
 Frontend & Backend Developer
-
 Focused on building modern, secure and scalable web applications.
